@@ -1,15 +1,8 @@
-﻿using namespace Spectre.Console
+﻿using module "..\..\Private\Completions\Completers.psm1"
+
+using namespace Spectre.Console
 using namespace System.Collections.Generic
 using namespace System.Text.RegularExpressions
-using namespace System.Management.Automation
-
-class SpectreColorsFM : ArgumentCompleterAttribute {
-    SpectreColorsFM() : base({
-        param($commandName, $parameterName, $wordToComplete, $commandAst, $fakeBoundParameters)
-        $options = [Spectre.Console.Color] | Get-Member -Static -Type Properties | Select-Object -ExpandProperty Name
-        return $options | Where-Object { $_ -like "$wordToComplete*" }
-    }){}
-}
 
 function New-LogSpectre {
     <#
@@ -111,21 +104,21 @@ function New-LogSpectre {
         [switch] $AsObject,
         [switch] $OverwriteLogFile,
         [string] $LogFilePath,
-        [SpectreColorsFM()]
+        [CompletionsSpectreColors()]
         [String] $TimestampColor="#dde1e6",
-        [SpectreColorsFM()]
+        [CompletionsSpectreColors()]
         [String] $DefaultTextColor="#a0a4ab",
-        [SpectreColorsFM()]
+        [CompletionsSpectreColors()]
         [String] $DebugColor="#dfe4eb",
-        [SpectreColorsFM()]
+        [CompletionsSpectreColors()]
         [String] $ErrorColor="#f57a88",
-        [SpectreColorsFM()]
+        [CompletionsSpectreColors()]
         [String] $InfoColor="#c8d1df",
-        [SpectreColorsFM()]
+        [CompletionsSpectreColors()]
         [String] $SuccessColor="#8cddb9",
-        [SpectreColorsFM()]
+        [CompletionsSpectreColors()]
         [String] $WarningColor="#eab077",
-        [SpectreColorsFM()]
+        [CompletionsSpectreColors()]
         [String] $InternalErrorColor="#f0a2a2"
     )
 

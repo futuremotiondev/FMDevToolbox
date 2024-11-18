@@ -30,6 +30,7 @@ function Invoke-VBMessageBox {
         $NonTopMost
     )
 
+    Add-Type -AssemblyName System.Windows.Forms
     [System.Windows.Forms.Application]::EnableVisualStyles()
 
     #Enable DPI awareness

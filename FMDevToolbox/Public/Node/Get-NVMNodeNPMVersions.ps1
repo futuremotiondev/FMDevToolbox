@@ -1,15 +1,4 @@
-﻿using namespace System.Management.Automation
-class NVMNodeVersions : IValidateSetValuesGenerator {
-    [String[]] GetValidValues() {
-        $lookup = @()
-        $NvmCmd = Get-Command nvm.exe
-        $Versions = & $NvmCmd list
-        # Strip the asterisk and the text "(Currently using 64-bit executable)"
-        $lookup = ($Versions -replace '\*|\(.*\)', '') -split "`r`n" | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' }
-        $lookup += "ALL"
-        return $lookup
-    }
-}
+﻿using module "..\..\Private\Completions\Completers.psm1"
 
 function Get-NVMNodeNPMVersions {
 
@@ -17,7 +6,7 @@ function Get-NVMNodeNPMVersions {
     param (
         [ValidateSet('Table','Json','List', IgnoreCase = $true, ErrorMessage="'{0}' is not a valid Output Format.")]
         [String] $OutputFormat='Table',
-        [ValidateSet([NVMNodeVersions], ErrorMessage="'{0}' is not valid. That version of node is not installed or inaccessable to NVM.")]
+        [CompletionsNVMNodeVersions()]
         [Array] $SelectVersions = 'ALL',
         [Switch] $ShowHeader,
         [int32] $TableWidth,

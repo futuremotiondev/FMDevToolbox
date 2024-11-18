@@ -1,15 +1,9 @@
-﻿using namespace System.Management.Automation
-class PythonVersions : IValidateSetValuesGenerator {
-    [string[]] GetValidValues() {
-        [String[]] $v = ($script:InstalledPythonVersions).Version
-        return $v
-    }
-}
+﻿using module "..\..\Private\Completions\Completers.psm1"
 
 function Install-PythonGlobalPackages {
     param(
         [Parameter(Mandatory, Position = 0)]
-        [ValidateSet([PythonVersions])]
+        [ValidateSet([ValidatePythonVersions])]
         [String[]] $Versions,
 
         [Parameter(Mandatory, Position = 1)]

@@ -1,18 +1,7 @@
-﻿using namespace Spectre.Console
-using namespace System.Management.Automation
-class SpectreConsoleTableBorder : IValidateSetValuesGenerator {
-    [String[]] GetValidValues() {
-        $BorderStyle = [Spectre.Console.TableBorder] | Get-Member -Static -MemberType Properties | Select-Object -ExpandProperty Name
-        return $BorderStyle
-    }
-}
-class SpectreColorsFM : ArgumentCompleterAttribute {
-    SpectreColorsFM() : base({
-        param($commandName, $parameterName, $wordToComplete, $commandAst, $fakeBoundParameters)
-        $options = [Spectre.Console.Color] | Get-Member -Static -Type Properties | Select-Object -ExpandProperty Name
-        return $options | Where-Object { $_ -like "$wordToComplete*" }
-    }){}
-}
+﻿using module "..\..\Private\Completions\Completers.psm1"
+
+using namespace Spectre.Console
+
 function Convert-ToPercentage {
     [CmdletBinding()]
 
@@ -36,26 +25,23 @@ function Convert-ToPercentage {
         [int] $DecimalPlaces = 0,
 
         [Parameter(ValueFromPipelineByPropertyName)]
-        [SpectreColorsFM()]
+        [CompletionsSpectreColors()]
         [string] $SpectreBorderColor = '#5e5e5e',
 
         [Parameter(ValueFromPipelineByPropertyName)]
-        [SpectreColorsFM()]
+        [CompletionsSpectreColors()]
         [string] $SpectreHeaderColor = '#97e0d4',
 
         [Parameter(ValueFromPipelineByPropertyName)]
-        [SpectreColorsFM()]
+        [CompletionsSpectreColors()]
         [string] $SpectreTextColor = '#9f9f9f',
 
         [Parameter(ValueFromPipelineByPropertyName)]
-        [ValidateSet([SpectreConsoleTableBorder])]
+        [ValidateSet([ValidateSpectreTableBorders])]
         [string] $SpectreBorderStyle = 'Rounded'
     )
 
     begin {
-
-        #  PARAMETER VALIDATION  ///////////////////////////////////////////////////////////////////////#
-        #///////////////////////////////////////////////////////////////////////////////////////////////#
 
         if($ReturnCollectionType -ne 'ObjectSpectreTable'){
             $ParamBorderColor = $PSBoundParameters.ContainsKey('SpectreBorderColor')
@@ -67,8 +53,6 @@ function Convert-ToPercentage {
                 Write-Error -Message "Spectre Formatting Parameters can only be passed when -ReturnCollectionType is set to 'ObjectSpectreTable'" -ErrorAction Stop
             }
         }
-
-        #  INIT COLLECTION ACCUMULATOR  ////////////////////////////////////////////////////////////////#
 
         $FinalValues = [System.Collections.Generic.List[Object]]@()
     }

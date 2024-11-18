@@ -1,13 +1,6 @@
 ﻿using namespace System.IO
-using namespace System.Management.Automation
 using namespace System.Collections.Generic
 
-# Custom class to generate valid values for the RecurseDepth parameter
-class RecurseDepthSetting : IValidateSetValuesGenerator {
-    [string[]] GetValidValues() {
-        return @('Unlimited',0,1,2,3,4,5,6,7,8,9,10)
-    }
-}
 <#
 .SYNOPSIS
     Shows files in a directory based on their age (older or newer than specified days).
@@ -27,7 +20,7 @@ class RecurseDepthSetting : IValidateSetValuesGenerator {
     The number of days to filter files newer than. Mutually exclusive with OlderThan.
 
 .PARAMETER RecurseDepth
-    The depth of subdirectories to recurse into. Can be 'Unlimited' or a specific number.
+    The depth of subdirectories to recurse into.
 
 .PARAMETER FileDisplay
     Determines whether to display the full path or only the file name.
@@ -64,8 +57,7 @@ function Show-FilesBasedOnAgeInDirectory {
         [String] $SortOrder = "Descending",
 
         [Parameter(Mandatory=$false)]
-        [ValidateSet([RecurseDepthSetting])]
-        [Object] $RecurseDepth = 'Unlimited',
+        [uint] $RecurseDepth = 4,
 
         [ValidateSet('FullPath','FileOnly')]
         [String] $FileDisplay = 'FullPath',
@@ -91,9 +83,7 @@ function Show-FilesBasedOnAgeInDirectory {
                 Path    =  $Dir
                 File    =  $true
                 Recurse =  $true
-            }
-            if($RecurseDepth -ne 'Unlimited'){
-                $ListSplatParams['Depth'] = $RecurseDepth
+                Depth   = $RecurseDepth
             }
             $List = Get-ChildItem @ListSplatParams
 

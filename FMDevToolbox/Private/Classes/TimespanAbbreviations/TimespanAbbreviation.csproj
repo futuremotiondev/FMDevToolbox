@@ -2,8 +2,8 @@
   <PropertyGroup>
     <OutputType>library</OutputType>
     <TargetFrameworks>net6.0</TargetFrameworks>
-    <AssemblyVersion>1.0.1</AssemblyVersion>
-    <AssemblyName>FMDevToolbox.PythonVenvObject</AssemblyName>
+    <AssemblyVersion>1.0.0</AssemblyVersion>
+    <AssemblyName>FMDevToolbox.TimespanAbbreviation</AssemblyName>
 </PropertyGroup>
   <ItemGroup>
   </ItemGroup>

@@ -1,10 +1,4 @@
-﻿using namespace System.Management.Automation
-class NodeVersions : IValidateSetValuesGenerator {
-    [string[]] GetValidValues() {
-        $Versions = Get-NVMNodeVersions
-        return $Versions
-    }
-}
+﻿using module "..\..\Private\Completions\Completers.psm1"
 
 <#
     .SYNOPSIS
@@ -37,7 +31,7 @@ class NodeVersions : IValidateSetValuesGenerator {
 function Uninstall-NVMNodeGlobalPackages {
     param(
         [Parameter(Mandatory,Position=0,ValueFromPipeline,ValueFromPipelineByPropertyName)]
-        [ValidateSet([NodeVersions])]
+        [CompletionsNVMNodeVersions()]
         $Version,
 
         [Parameter(Mandatory,ValueFromPipeline,ValueFromPipelineByPropertyName)]

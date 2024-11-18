@@ -1,16 +1,10 @@
-﻿using namespace System.Management.Automation
-class NodeVersions : IValidateSetValuesGenerator {
-    [string[]] GetValidValues() {
-        $Versions = Get-NVMNodeVersions
-        return $Versions += 'All'
-    }
-}
+﻿using module "..\..\Private\Completions\Completers.psm1"
 
 function Get-NVMInstalledNPMVersions {
     [CmdletBinding()]
     param (
         [Parameter(ValueFromPipeline)]
-        [ValidateSet([NodeVersions])]
+        [CompletionsNVMNodeVersions()]
         [String] $NodeVersion = 'All'
     )
 

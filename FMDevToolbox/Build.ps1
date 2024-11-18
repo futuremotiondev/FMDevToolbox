@@ -1,91 +1,200 @@
 ﻿[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseApprovedVerbs', '')]
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingCmdletAliases', '')]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', '')]
 param()
-function Install-FMDevToolboxPythonVenvObject {
+
+$script:ModuleRoot = $PSScriptRoot
+$script:ModuleName = $script:ModuleRoot.Split('\')[-1]
+$script:ModuleManifest = "$script:ModuleRoot\$script:ModuleName.psd1"
+
+# TODO
+# cmd.exe /c 'dir /b /ad /o-n %systemroot%\Microsoft.NET\Framework\v?.*'
+# dotnet --list-sdks
+# Install-AndBuildCustomLibrary
+# function Install-AndBuildCustomLibrary {
+#     param (
+#         [String] $BuildPath = "D:\Dev\Powershell\FMModulesWorking\FMDevToolbox",
+#         [String] $InstallPath,
+#         [Int32] $DotnetCLIVersion = 8
+#     )
+#
+#     [Object[]] $CSProjItemCollector = Get-ChildItem -LiteralPath $BuildPath -File -Recurse -Force -Filter "*.csproj"
+#     if($CSProjItemCollector.Count -gt 1){
+#         Write-Error "Multiple projects are located within the build path. This isn't supported yet."
+#     }
+#     $CSProjFile = $CSProjItemCollector[0] | Select-Object -ExpandProperty FullName
+#     $CSProjFilename = [System.IO.Path]::GetFileName($CSProjFile)
+#
+#     [xml] $CSProjContents = Get-Content -Path $CSProjFile
+#     [String[]] $TargetFrameworks = $CSProjContents.Project.PropertyGroup.TargetFrameworks
+#     foreach ($TargetFramework in $TargetFrameworks) {
+#     }
+# }
+
+function Update-ModuleFunctionsAndAliases {
     [CmdletBinding()]
     param (
-        [int] $DotnetMajorVersion = 8,
-        [String] $BuildPath,
-        [String] $InstallLocation
+        [String] $Manifest = "$script:ModuleManifest",
+        [String] $ModuleRoot = "$script:ModuleRoot"
     )
 
-    if(Test-Path $InstallLocation -PathType Container){
-        Remove-Item -LiteralPath $InstallLocation -Recurse -Force -Verbose
-        New-Item -Path $InstallLocation -ItemType Directory -Force | Out-Null
+    [String[]] $AliasesToExport = @()
+    [String[]] $FunctionsToExport = @()
+
+    $ModuleFunctions = Get-ChildItem -Path "$ModuleRoot\Public\*.ps1" -Recurse
+    $ModuleFunctions | % {
+        $Alias = Get-Alias -Definition $_.BaseName -ErrorAction SilentlyContinue
+        if ($Alias) { $AliasesToExport += $Alias }
+        $FunctionsToExport += $_.BaseName
     }
-
-    $CMD = Get-Command dotnet -ErrorAction SilentlyContinue
-    if ((-not$CMD) -or (-not(dotnet --list-sdks | Select-String "^$DotnetMajorVersion.+"))) {
-        Write-Host "dotnet SDK $DotnetMajorVersion wasn't found. Please install dotnet SDK $DotnetMajorVersion."
-        Write-Host "You can install the dotnet SDK $DotnetMajorVersion by running 'winget install Microsoft.DotNet.SDK.$DotnetSdkMajorVersion' in an administrator console."
+    $MembersToExport = [PSCustomObject][ordered]@{}
+    if($FunctionsToExport.Count){
+        $FunctionsToExport = $FunctionsToExport | Sort-Object
+        $MembersToExport | Add-Member -NotePropertyName 'Functions' -NotePropertyValue $FunctionsToExport
     }
-    try {
-        Push-Location
-        Set-Location -Path $BuildPath
-        & dotnet build -c Release -o $InstallLocation | Out-Null
-        Remove-Item -LiteralPath "$BuildPath\obj" -Recurse -Force | Out-Null
-    } finally {
-        Pop-Location
+    if($AliasesToExport.Count){
+        $AliasesToExport = $AliasesToExport | Sort-Object
+        $MembersToExport | Add-Member -NotePropertyName 'Aliases' -NotePropertyValue $AliasesToExport
+    }
+    if($MembersToExport){
+        return $MembersToExport
+    }
+    else{
+        return $null
     }
 }
 
-function Install-MicrosoftToolkitUwpNotifications {
+function Install-ModuleDependencies {
+    [CmdletBinding()]
     param (
-        [string] $InstallLocation,
-        [string] $Version = "7.1.3"
+        [String] $InstallPath = "$script:ModuleRoot\Lib"
     )
-    New-Item -Path $InstallLocation -ItemType "Directory" -Force | Out-Null
-    $libPath = Join-Path $InstallLocation "Microsoft.Toolkit.Uwp.Notifications.7.1.3"
-    New-Item -Path $libPath -ItemType Directory -Force -Verbose | Out-Null
-    $TempDir = [System.IO.Directory]::CreateTempSubdirectory()
-    $downloadLocation = Join-Path $TempDir "download.zip"
-    Invoke-WebRequest "https://www.nuget.org/api/v2/package/Microsoft.Toolkit.Uwp.Notifications/$Version" -OutFile $downloadLocation -UseBasicParsing
-    Expand-Archive $downloadLocation $TempDir -Force
-    Remove-Item $downloadLocation
-    $Dir = Get-ChildItem -LiteralPath $TempDir -Include 'net5.0' -Directory -Recurse | % {$_.FullName}
-    $Dir | Move-Item -Destination $libPath -Force
-    Remove-Item -LiteralPath $TempDir -Recurse -Force | Out-Null
+    begin {
+        if(-not(Test-Path -LiteralPath $InstallPath -PathType Container)){
+            New-Item $InstallPath -ItemType Directory | Out-Null
+        }
+        Get-ChildItem -LiteralPath "$script:ModuleRoot\Lib" |
+            Remove-Item -Recurse -Force -ErrorAction SilentlyContinue | Out-Null
+        $RequiredAssemblies = @()
+    }
+    process {
+        function Install-ModulePyVenvPackage {
+
+            $BuildPath = "$script:ModuleRoot\Private\Classes\PythonVenvObject"
+            $InstallPath = "$script:ModuleRoot\Lib\FMDevToolbox.PythonVenvObject\net6.0"
+            $DotnetVersion = 8
+
+            if(Test-Path $InstallPath -PathType Container){
+                Remove-Item -LiteralPath $InstallPath -Recurse -Force -Verbose | Out-Null
+            }
+            New-Item -Path $InstallPath -ItemType Directory -Force | Out-Null
+            New-Item -Path $BuildPath -ItemType Directory -Force | Out-Null
+            if (-not (Get-Command dotnet -ErrorAction SilentlyContinue) -or
+            -not (dotnet --list-sdks | Select-String "^$DotnetVersion.+")) {
+                Write-Host "dotnet SDK $DotnetVersion wasn't found. Please install it."
+                Write-Host "Run 'winget install Microsoft.DotNet.SDK.$DotnetVersion' in an admin console."
+                return
+            }
+            try {
+                Push-Location -Path $BuildPath
+                & dotnet build -c Release -o $InstallPath | Out-Null
+            }
+            catch {
+                Remove-Item -LiteralPath "$BuildPath\obj" -Recurse -Force | Out-Null
+                Pop-Location
+                Write-Error "A problem occurred installing PythonVenvObject. ($_)"
+            }
+            Remove-Item -LiteralPath "$BuildPath\obj" -Recurse -Force | Out-Null
+            Pop-Location
+            return [System.IO.Path]::Combine($InstallPath, 'FMDevToolbox.PythonVenvObject.dll')
+        }
+
+        function Install-ModuleNugetPackage {
+            param (
+                [string] $InstallPath,
+                [string] $PackageName,
+                [string] $Version,
+                [string] $Framework,
+                [string] $DLLName
+            )
+
+            $LibPath = Join-Path $InstallPath "$PackageName.$Version"
+            New-Item -Path $LibPath -ItemType Directory -Force | Out-Null
+
+            $TempDir = [System.IO.Directory]::CreateTempSubdirectory()
+            $DownloadPath = Join-Path $TempDir "download.zip"
+
+            try {
+                Invoke-WebRequest "https://www.nuget.org/api/v2/package/$PackageName/$Version" -OutFile $DownloadPath -UseBasicParsing
+                Expand-Archive $DownloadPath $TempDir -Force
+                Remove-Item $DownloadPath
+
+                $Dir = Get-ChildItem -LiteralPath $TempDir -Include $Framework -Directory -Recurse |
+                    Select-Object -ExpandProperty FullName
+                Move-Item -Path $Dir -Destination $LibPath -Force
+                Remove-Item -LiteralPath $TempDir -Recurse -Force | Out-Null
+                if($DLLName){ return [System.IO.Path]::Combine($LibPath, $Framework, $DLLName) }
+                else{ return [System.IO.Path]::Combine($LibPath, $Framework, "$PackageName.dll") }
+            }
+            finally {
+                Remove-Item -LiteralPath $TempDir -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        }
+
+        $Packages = @{
+            'Microsoft.Toolkit.Uwp.Notifications' = @{ Version = '7.1.3'; Framework = 'net5.0-windows10.0.17763'; DLLName = $null; }
+            'Microsoft.Windows.SDK.NET.Ref' = @{ Version = '10.0.26100.34'; Framework = 'net6.0'; DLLName = 'Microsoft.Windows.SDK.NET.dll'; }
+            'Ookii.Dialogs.WinForms' = @{ Version = '4.0.0'; Framework = 'net6.0-windows7.0'; DLLName = $null; }
+        }
+        # Install each package
+        foreach ($package in $packages.GetEnumerator()) {
+            $params = @{
+                InstallPath = $InstallPath
+                PackageName = $package.Key
+                Version     = $package.Value.Version
+                Framework   = $package.Value.Framework
+                DLLName     = $package.Value.DLLName
+            }
+            $RequiredAssemblies += Install-ModuleNugetPackage @params
+        }
+
+        $RequiredAssemblies += Install-ModulePyVenvPackage
+        $RequiredAssemblies = $RequiredAssemblies | Sort-Object
+
+        # Create relative paths
+        $RequiredAssemblies = $RequiredAssemblies | % {
+            $_.Replace($script:ModuleRoot, '.')
+        }
+        return $RequiredAssemblies
+    }
 }
 
-function Install-MicrosoftWindowsSDKNet {
-    param (
-        [string] $InstallLocation,
-        [string] $Version = "10.0.19041.31"
-    )
-    New-Item -Path $InstallLocation -ItemType "Directory" -Force | Out-Null
-    $libPath = Join-Path $InstallLocation "Microsoft.Windows.SDK.NET.10.0.19041.31"
-    New-Item -Path $libPath -ItemType Directory -Force -Verbose | Out-Null
-    $TempDir = [System.IO.Directory]::CreateTempSubdirectory()
-    $downloadLocation = Join-Path $TempDir "download.zip"
-    Invoke-WebRequest "https://www.nuget.org/api/v2/package/Microsoft.Windows.SDK.NET.Ref/$Version" -OutFile $downloadLocation -UseBasicParsing
-    Expand-Archive $downloadLocation $TempDir -Force
-    Remove-Item $downloadLocation
-    $Dir = Get-ChildItem -LiteralPath $TempDir -Include 'net6.0' -Directory -Recurse | % {$_.FullName}
-    $Dir | Move-Item -Destination $libPath -Force
-    Remove-Item -LiteralPath $TempDir -Recurse -Force | Out-Null
-}
+$ToExport = Update-ModuleFunctionsAndAliases
+$FunctionsToExport = $ToExport.Functions
+$AliasesToExport = $ToExport.Aliases
+$RequiredAssemblies = Install-ModuleDependencies
+$ModuleVersion = "1.0.2"
+$ReleaseNotes = '# 1.0.2 (11-18-2024)
 
-function Install-OokiiDialogsWinForms {
-    param (
-        [string] $InstallLocation,
-        [string] $Version = "4.0.0"
-    )
-    New-Item -Path $InstallLocation -ItemType "Directory" -Force | Out-Null
-    $libPath = Join-Path $InstallLocation "Ookii.Dialogs.WinForms.4.0.0"
-    New-Item -Path $libPath -ItemType Directory -Force -Verbose | Out-Null
-    $TempDir = [System.IO.Directory]::CreateTempSubdirectory()
-    $downloadLocation = Join-Path $TempDir "download.zip"
-    Invoke-WebRequest "https://www.nuget.org/api/v2/package/Ookii.Dialogs.WinForms/$Version" -OutFile $downloadLocation -UseBasicParsing
-    Expand-Archive $downloadLocation $TempDir -Force
-    Remove-Item $downloadLocation
-    $Dir = Get-ChildItem -LiteralPath $TempDir -Include 'net6.0-windows7.0' -Directory -Recurse | % {$_.FullName}
-    $Dir | Move-Item -Destination $libPath -Force
-    Remove-Item -LiteralPath $TempDir -Recurse -Force | Out-Null
-}
+* Fix: Wrong assemblies being loaded breaking toast notifications.
+* More to author.
 
-$PyVenvObjectBuildPath = [System.IO.Path]::Combine($PSScriptRoot, "Private", "Classes", "PythonVenvObject")
-$PyVenvObjectInstall = [System.IO.Path]::Combine($PSScriptRoot, "Lib", "FMDevToolbox.PythonVenvObject", "net6.0")
-Install-FMDevToolboxPythonVenvObject -BuildPath $PyVenvObjectBuildPath -InstallLocation $PyVenvObjectInstall
-Install-MicrosoftToolkitUwpNotifications -InstallLocation "$PSScriptRoot\Lib"
-Install-MicrosoftWindowsSDKNet -InstallLocation "$PSScriptRoot\Lib"
-Install-OokiiDialogsWinForms -InstallLocation "$PSScriptRoot\Lib"
+# 1.0.1 (11-14-2024)
+
+Fixed errors in module packaging and pruned obsolete functions.
+
+# 1.0.0 (11-10-2024)
+
+Created Module.
+'
+
+$UpdateSplat = @{
+    Path = $script:ModuleManifest
+    FunctionsToExport = $FunctionsToExport
+    AliasesToExport = $AliasesToExport
+    ModuleVersion = $ModuleVersion
+    RequiredAssemblies = $RequiredAssemblies
+    ReleaseNotes = $ReleaseNotes
+}
+Update-PSModuleManifest @UpdateSplat -Verbose
+Test-ModuleManifest -Path $script:ModuleManifest

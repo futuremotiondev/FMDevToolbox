@@ -1,29 +1,10 @@
-﻿<#
-.SYNOPSIS
-    Returns all private functions defined by a loaded module as an object with keys for CommandType, Name, Version, and Source.
-.PARAMETER Module
-    The specified module name (String). Note: The module must be loaded in session.
-.EXAMPLE
-    C:\PS> Get-ModulePrivateFunctions -Module "posh-git"
-    This example will return all private functions defined in the "posh-git" module.
-.EXAMPLE
-    $modules = Get-Module
-    foreach ($module in $modules) {
-        Get-ModulePrivateFunctions -Module $module.Name
-    }
-    This example will print out all private functions defined in all loaded modules.
-#>
-function Get-ModulePrivateFunctions {
+﻿using module "..\..\Private\Completions\Completers.psm1"
+function Get-PrivateModuleFunctions {
     [CmdletBinding()]
     param (
-        [Parameter(
-            Mandatory,
-            ValueFromPipeline,
-            ValueFromPipelineByPropertyName,
-            Position=0
-        )]
-        [string[]]
-        $Module
+        [Parameter(Mandatory,Position=0,ValueFromPipeline)]
+        [CompletionsModuleEnumeration()]
+        [string[]] $Module
     )
     foreach ($Name in $Module) {
         $mod = $null
@@ -42,13 +23,3 @@ function Get-ModulePrivateFunctions {
         & $mod $ScriptBlock | Where-Object {$_.Source -eq $Name -and $_.Name -notin $PublicFunctions}
     }
 }
-
-Register-ArgumentCompleter -CommandName Get-ModulePrivateFunctions -ParameterName Module -ScriptBlock {
-    param($commandName, $parameterName, $wordToComplete, $commandAst, $fakeBoundParameter)
-
-    (Get-Module -Name "$wordtoComplete*").name |
-    ForEach-Object {
-        [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)
-    }
-}
-

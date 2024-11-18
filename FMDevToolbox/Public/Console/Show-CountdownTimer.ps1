@@ -1,7 +1,5 @@
 ﻿function Show-CountdownTimer {
-
     param (
-
         [Parameter(Position=0)]
         [ValidateRange(1, [Int32]::MaxValue)]
         [Int32]$Seconds = 0,
@@ -12,20 +10,18 @@
         [ValidateRange(1, [Int32]::MaxValue)]
         [Int32]$Minutes = 0,
 
-        [ValidateSet('Milliseconds',
-                     'Seconds','SecondsDecimal','SecondsAndMilliseconds',
-                     'MinutesDecimal','MinutesAndSeconds',
-                     'MinutesAndSecondsAndMilliseconds',
-                     IgnoreCase = $true
-        )]
+        [ValidateSet('Milliseconds', 'Seconds', 'SecondsDecimal', 'SecondsAndMilliseconds',
+                     'MinutesDecimal', 'MinutesAndSeconds', 'MinutesAndSecondsAndMilliseconds',
+                     IgnoreCase = $true)]
         [String] $CountdownUnit = 'Seconds',
+
         [String] $FormatString = "Starting in [%TIME%]s...",
         [String] $FormatSeparator = ':',
         [Switch] $ShowSpinner
     )
 
-    if(($Seconds + $Milliseconds + $Minutes) -eq 0){
-        throw "You must pass in a value to either -Seconds -Milliseconds or -Minutes"
+    if (($Seconds + $Milliseconds + $Minutes) -eq 0) {
+        throw "You must pass in a value to either -Seconds, -Milliseconds, or -Minutes"
     }
 
     $spinner = @('|', '/', '-', '\')
@@ -36,61 +32,54 @@
     $runTime = $totalMilliseconds
 
     try {
-        while($runTime -gt 0) {
-            switch ($CountdownUnit) {
-                'Milliseconds' {
-                    $FormatStringNow = $FormatString -replace '\[%TIME%\]', "${runTime}"
-                }
+        while ($runTime -gt 0) {
+            $FormatStringNow = switch ($CountdownUnit) {
+                'Milliseconds' { $FormatString -replace '\[%TIME%\]', "$runTime" }
                 'SecondsDecimal' {
-                    $sec = Format-Milliseconds -Milliseconds $runTime -ConvertTo Seconds -DecimalPlaces 2
-                    $FormatStringNow = $FormatString -replace '\[%TIME%\]', ('{0}' -f $sec)
+                    $sec = "{0:N2}" -f ($runTime / 1000)
+                    $FormatString -replace '\[%TIME%\]', $sec
                 }
                 'SecondsAndMilliseconds' {
                     $sec = [math]::Floor($runTime / 1000) -as [System.Int32]
                     $mil = $runTime % 1000
-                    $FormatStringNow = $FormatString -replace '\[%TIME%\]', ("{0:D2}$FormatSeparator{1:D3}" -f $sec, $mil)
+                    $FormatString -replace '\[%TIME%\]', ("{0:D2}$FormatSeparator{1:D3}" -f $sec, $mil)
                 }
                 'MinutesDecimal' {
-                    $min = Format-Milliseconds -Milliseconds $runTime -ConvertTo Minutes -DecimalPlaces 2
-                    $FormatStringNow = $FormatString -replace '\[%TIME%\]', ('{0}' -f $min)
+                    $min = "{0:N2}" -f ($runTime / 60000)
+                    $FormatString -replace '\[%TIME%\]', $min
                 }
                 'MinutesAndSeconds' {
-                    $min = [math]::Floor($runTime / 60000) -as [System.Int32]
-                    $sec = [math]::Floor(($runTime % 60000) / 1000) -as [System.Int32]
-                    $FormatStringNow = $FormatString -replace '\[%TIME%\]', ("{0:D2}$FormatSeparator{1:D2}" -f $min, $sec)
+                    $min = [math]::Floor($runTime / 60000)
+                    $sec = [math]::Floor(($runTime % 60000) / 1000)
+                    $FormatString -replace '\[%TIME%\]', ("{0:D2}$FormatSeparator{1:D2}" -f $min, $sec)
                 }
                 'MinutesAndSecondsAndMilliseconds' {
-                    $min = [math]::Floor($runTime / 60000) -as [System.Int32]
-                    $sec = [math]::Floor(($runTime % 60000) / 1000) -as [System.Int32]
+                    $min = [math]::Floor($runTime / 60000)
+                    $sec = [math]::Floor(($runTime % 60000) / 1000)
                     $mil = $runTime % 1000
-                    $FormatStringNow = $FormatString -replace '\[%TIME%\]', ("{0:D2}$FormatSeparator{1:D2}$FormatSeparator{2:D3}" -f $min, $sec, $mil)
+                    $FormatString -replace '\[%TIME%\]', ("{0:D2}$FormatSeparator{1:D2}$FormatSeparator{2:D3}" -f $min, $sec, $mil)
                 }
                 default {
-                    $remainingSeconds = [math]::Round($runTime / 1000, 2) -as [System.Int32]
-                    $FormatStringNow = $FormatString -replace '\[%TIME%\]', "${remainingSeconds}"
+                    $remainingSeconds = [math]::Round($runTime / 1000)
+                    $FormatString -replace '\[%TIME%\]', "$remainingSeconds"
                 }
             }
 
-            if($ShowSpinner){
-                Write-Host (" {0} " -f $spinner[$spinnerPos%4]) -NoNewline
-                Write-Host $FormatStringNow -NoNewline
-            }else{
-                Write-Host $FormatStringNow -NoNewline
+            if ($ShowSpinner) {
+                Write-Host (" {0} " -f $spinner[$spinnerPos % 4]) -NoNewline
             }
+            Write-Host $FormatStringNow -NoNewline
 
             $host.UI.RawUI.CursorPosition = $origpos
-            $spinnerPos += 1
+            $spinnerPos++
 
-            if(($CountdownUnit -match 'Milliseconds') -or ($CountdownUnit -match 'SecondsDecimal')){
-                $runTime -= 50 # Decrement by 50 milliseconds for more granular countdown display
-                Start-Sleep -Milliseconds 50
-            } else {
-                $runTime -= 1000 # Decrement by 1000 milliseconds (1 second)
-                Start-Sleep -Milliseconds 1000
-            }
+            $decrement = if ($CountdownUnit -match 'Milliseconds|SecondsDecimal') { 50 } else { 1000 }
+            $runTime -= $decrement
+            Start-Sleep -Milliseconds $decrement
         }
     } finally {
         Write-Host "" -NoNewline
         [Console]::CursorVisible = $true
     }
 }
+

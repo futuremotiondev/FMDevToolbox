@@ -1,12 +1,7 @@
-﻿using namespace Microsoft.Toolkit.Uwp.Notifications
-using namespace System.Management.Automation
+﻿using module "..\..\Private\Completions\Completers.psm1"
 
-class UWPAdaptiveImageCrop : IValidateSetValuesGenerator {
-    [String[]] GetValidValues() {
-        $lookup = [AdaptiveImageCrop] | Get-Member -Static -MemberType Properties | Select-Object -ExpandProperty Name
-        return $lookup
-    }
-}
+using namespace Microsoft.Toolkit.Uwp.Notifications
+using namespace System.Management.Automation
 
 function Show-UWPToastNotification {
     [CmdletBinding()]
@@ -25,7 +20,7 @@ function Show-UWPToastNotification {
         [string] $Logo,
 
         [Parameter(Mandatory=$false,ValueFromPipelineByPropertyName)]
-        [ValidateSet([UWPAdaptiveImageCrop],ErrorMessage = "Value '{0}' is invalid. Try one of: {1}")]
+        [ValidateSet([ValidateUWPAdaptiveImageCrop],ErrorMessage = "Value '{0}' is invalid. Try one of: {1}")]
         [string] $LogoCrop = [AdaptiveImageCrop]::Circle,
 
         [Parameter(Mandatory=$false,ValueFromPipelineByPropertyName)]
@@ -41,7 +36,7 @@ function Show-UWPToastNotification {
     )
 
     begin {
-        $ContentBuilder = [ToastContentBuilder]::new()
+        $ContentBuilder = [Microsoft.Toolkit.Uwp.Notifications.ToastContentBuilder]::new()
     }
 
     process {
@@ -75,7 +70,6 @@ function Show-UWPToastNotification {
             $ContentBuilder.AddButton($DismissButton) | Out-Null
         }
 
-        $ContentBuilder.Show() | Out-Null
-
+        $ContentBuilder.Show()
     }
 }

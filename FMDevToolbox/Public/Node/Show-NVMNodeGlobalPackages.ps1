@@ -1,17 +1,9 @@
-﻿using namespace System.Management.Automation
-class NodeVersions : IValidateSetValuesGenerator {
-    [string[]] GetValidValues() {
-        $Versions = Get-NVMNodeVersions
-        return $Versions += 'All'
-    }
-}
-
+﻿using module "..\..\Private\Completions\Completers.psm1"
 function Show-NVMNodeGlobalPackages {
     [CmdletBinding()]
     param (
-        [ValidateSet([NodeVersions])]
+        [CompletionsNVMNodeVersions()]
         [String[]] $Versions = 'All',
-
         [ValidateSet('TableCombined','TableSeparated','SpectreTable','JSON','List','Object')]
         [String] $OutputFormat='SpectreTable',
         [Int32] $TableWidth = $Host.UI.RawUI.WindowSize.Width - 1,

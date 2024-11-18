@@ -1,56 +1,72 @@
 ﻿function Resolve-RelativePath {
-    [CmdletBinding()]
-    param (
-        [Parameter(Mandatory, Position=0, ValueFromPipeline)]
-        [ValidateNotNullOrEmpty()]
-        [ValidatePattern('^[^*?]+$')] # Disallows '*' and '?' wildcard characters
-        [String] $Path,
-        [String] $RootPath = $PWD,
-        [ValidateSet("ResolvedOnly", "Object")]
-        [String] $OutputFormat = "ResolvedOnly",
-        [Switch] $ResolveSymlinks
-    )
-    process {
-        try {
+    <#
+    .SYNOPSIS
+    Resolves a relative path to an absolute path based on a specified root path.
 
-            $Path = [System.IO.Path]::TrimEndingDirectorySeparator($Path)
+    .DESCRIPTION
+    The Resolve-RelativePath function takes a relative path and a root path, combines them,
+    and resolves the resulting path to an absolute path. It also provides an option to resolve symbolic links.
 
-            if(-not[System.IO.Path]::IsPathRooted($RootPath)){
-                Write-Error "Supplied root path is not absolute."
-                return
-            }
+    .PARAMETER RelativePath
+    The relative path that needs to be resolved into an absolute path.
 
-            if (-not [System.IO.Path]::IsPathRooted($Path)) {
-                Write-Verbose "Combining RootPath '$RootPath' with Path '$Path'."
-                $FullPath = Join-Path -Path $RootPath -ChildPath $Path
-                $ResolvedPath = [System.IO.Path]::GetFullPath($FullPath)
-                $OriginalPath = $Path
+    .PARAMETER RootPath
+    The root path from which the relative path should be resolved. Defaults to the current directory if not specified.
 
-            } else {
-                Write-Verbose "The provided path '$Path' is not a relative path."
-                $ResolvedPath = $Path
-                $OriginalPath = $Path
-            }
+    .PARAMETER ResolveSymlinks
+    A switch to indicate if symbolic links should be resolved to their target paths.
 
-            if ($ResolveSymlinks -and (Test-Path -Path $ResolvedPath)) {
-                $Target = (Get-Item -Path $ResolvedPath).Target
-                if ($Target) {
-                    $ResolvedPath = $Target
+    .OUTPUTS
+    System.String
+
+    .EXAMPLE
+    # **Example 1**
+    # This example demonstrates how to resolve a relative path using the current directory as the root.
+    Resolve-RelativePath -RelativePath "..\Documents\file.txt"
+
+    .EXAMPLE
+    # **Example 2**
+    # This example demonstrates how to resolve a relative path with a specified root path.
+    Resolve-RelativePath -RelativePath "Projects\project1" -RootPath "C:\Users\Example"
+
+    .EXAMPLE
+    # **Example 3**
+    # This example demonstrates how to resolve a relative path and resolve any symlinks in the path.
+    Resolve-RelativePath -RelativePath "Links\shortcut" -RootPath "C:\Users\Example" -ResolveSymlinks
+
+    .NOTES
+    Author: Futuremotion
+    Website: https://github.com/futuremotiondev
+    Date: [Today's Date]
+    #>
+        [CmdletBinding()]
+        param (
+            [Parameter(Mandatory, Position=0, ValueFromPipeline)]
+            [ValidateNotNullOrEmpty()]
+            [Alias("Path")]
+            [String] $RelativePath,
+
+            [Parameter(Position=1, ValueFromPipelineByPropertyName)]
+            [String] $RootPath = $PWD,
+
+            [Switch] $ResolveSymlinks
+        )
+        process {
+            $relativePath = [System.IO.Path]::TrimEndingDirectorySeparator($relativePath)
+            if (-not [System.IO.Path]::IsPathRooted($RootPath)) { return $null }
+
+            # Combine the root path with the relative path
+            $combinedPath = Join-Path -Path $RootPath -ChildPath $relativePath
+
+            # Resolve the combined path to an absolute path
+            $absolutePath = [System.IO.Path]::GetFullPath($combinedPath)
+
+            if ($ResolveSymlinks -and (Test-Path -Path $absolutePath)) {
+                $symlinkTarget = (Get-Item -Path $absolutePath).Target
+                if ($symlinkTarget) {
+                    $absolutePath = $symlinkTarget
                 }
             }
-
-            if ($OutputFormat -eq 'ResolvedOnly') {
-                return $ResolvedPath
-            }
-            else {
-                return [PSCustomObject][ordered]@{
-                    OriginalPath   = $OriginalPath
-                    ResolvedPath   = $ResolvedPath
-                    RootPath       = $RootPath
-                }
-            }
-        } catch {
-            Write-Error "Failed to resolve path: $($_.Exception.Message)"
+            return $absolutePath
         }
     }
-}
