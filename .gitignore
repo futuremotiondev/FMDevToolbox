@@ -72,3 +72,4 @@ Lib/
 FMDevToolbox.Working
 FMDevToolbox.Tests/Packages
 *.psd
+FMDevToolbox.Docs/Generated

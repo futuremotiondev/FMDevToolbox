@@ -5,9 +5,13 @@ foreach ($Directory in @('Private', 'Public')) {
     }
 }
 
+if(-not$script:ModuleRoot){
+    $script:ModuleRoot = $PSScriptRoot
+}
+
 if (-not $script:InstalledPythonVersions) {
     $script:InstalledPythonVersions = Get-PythonInstallations -SuppressFreeThreaded
 }
 if(-not $script:PrettierConfig) {
-    $script:PrettierConfig = "$PSScriptRoot\Config\prettierrc.json"
+    $script:PrettierConfig = "$PSScriptRoot\Data\Prettier\prettierrc.json"
 }
