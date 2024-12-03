@@ -34,7 +34,7 @@
     },
     "tasks": [
         {
-            "label": "FMDevToolbox Build and Output",
+            "label": "FMDevToolbox Build",
             "type": "shell",
             "command": " & '${workspaceFolder}/${workspaceFolderBasename}/Build.ps1'",
             "presentation": {

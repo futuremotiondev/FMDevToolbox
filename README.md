@@ -168,11 +168,11 @@ Convert-ToPercentage
 
 ```
 Confirm-NPMPackageExistsInRegistry
-Get-InstalledNodeVersion
-Get-NPMLatestVersion
-Get-NVMActiveNodeVersion
-Get-NVMInstallationDirectory
-Get-NVMInstalledNodeVersions
+Get-NodeInstalledVersion
+Get-NodeLatestNPMVersion
+Get-NodeActiveVersionInNVM
+Get-NodeNVMInstallationDirectory
+Get-NodeInstalledVersionsNVM
 Get-NVMInstalledNPMVersions
 Get-NVMLatestNodeVersionInstalled
 Get-NVMNodeInstallationDirectory

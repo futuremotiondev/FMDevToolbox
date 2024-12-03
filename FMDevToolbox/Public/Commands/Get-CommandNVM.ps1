@@ -1,14 +1,16 @@
 ﻿function Get-CommandNVM {
     [CmdletBinding()]
-    $pathsToCheck = @(
-        "nvm.exe",
-        "nvm",
+    $CMD = Get-Command nvm.exe -CommandType Application -ErrorAction SilentlyContinue
+    if($CMD){
+        return $CMD
+    }
+    $PathsToCheck = @(
         "$env:NVM_HOME\nvm.exe",
-        "C:\Users\$env:USERNAME\AppData\Roaming\nvm\nvm.exe"
+        "$env:SystemDrive\Users\$env:USERNAME\AppData\Roaming\nvm\nvm.exe"
     )
-    foreach ($path in $pathsToCheck) {
-        $NVMCmd = Get-Command $path -CommandType Application -ErrorAction SilentlyContinue
-        if ($NVMCmd) { return $NVMCmd }
+    foreach ($Path in $PathsToCheck) {
+        $CMD = Get-Command $Path -CommandType Application -ErrorAction SilentlyContinue
+        if ($CMD) { return $CMD }
     }
     Write-Error "NVM (Node Version Manager) cannot be found. Make sure it's installed."
     return $null
