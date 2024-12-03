@@ -190,7 +190,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New function 'Confirm-PathIsSingleFile'
 - New function 'Confirm-PathIsIllegal'
 - New function 'Confirm-PathIsAFile'
-- New function 'Confirm-NVMForWindowsInstalled'
+- New function 'Confirm-NVMForWindowsIsInstalled'
 - New function 'Confirm-NVMForWindowsContainsInstallations'
 - New function 'Confirm-NPMPackageExistsInRegistry'
 - New function 'Add-StringSuffixToFile'

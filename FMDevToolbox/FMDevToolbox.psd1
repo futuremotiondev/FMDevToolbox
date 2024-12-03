@@ -76,7 +76,7 @@ FormatsToProcess = @()
 FunctionsToExport = 'Add-NumericSuffixToFile', 'Add-StringSuffixToFile', 
                'Confirm-NPMPackageExistsInRegistry', 
                'Confirm-NVMForWindowsContainsInstallations', 
-               'Confirm-NVMForWindowsInstalled', 'Confirm-PathIsAFile', 
+               'Confirm-NVMForWindowsIsInstalled', 'Confirm-PathIsAFile', 
                'Confirm-PathIsIllegal', 'Confirm-PathIsSingleFile', 
                'Confirm-PythonFolderIsVENV', 'Confirm-PythonPyPiPackageExists', 
                'Confirm-WindowsPathIsProtected', 'Convert-AudioToStemsWithDEMUCS', 
@@ -210,7 +210,7 @@ PrivateData = @{
         # ReleaseNotes = ''
 
         # Prerelease string of this module
-        Prerelease = 'prerelease-004'
+        # Prerelease = ''
 
         # Flag to indicate whether the module requires explicit user acceptance for install/update/save
         # RequireLicenseAcceptance = $false

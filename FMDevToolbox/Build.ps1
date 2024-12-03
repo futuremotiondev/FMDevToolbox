@@ -300,7 +300,7 @@ function Update-Module {
         }
     }
 
-    $PrereleaseTag = ''
+    $PrereleaseTag = $ExistingPrerelease
     if($StepVersion -ne "None"){
         $ModuleVersion = Step-Version -Version $ExistingVersion -By $StepVersion
         $PrereleaseTag = '%%%REMOVE%%%%'
@@ -363,5 +363,5 @@ function Update-Module {
     Save-FunctionMarkdownList -Version "$ModuleVersion $PrereleaseTag"
 }
 
-Update-Module -UpdateFunctionsAndAliases
+Update-Module -UpdateFunctionsAndAliases -RemovePrerelease
 
