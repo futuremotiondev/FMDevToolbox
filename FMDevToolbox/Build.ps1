@@ -300,7 +300,10 @@ function Update-Module {
         }
     }
 
-    $PrereleaseTag = $ExistingPrerelease
+
+    if($ExistingPrerelease){
+        $PrereleaseTag = $ExistingPrerelease
+    }
     if($StepVersion -ne "None"){
         $ModuleVersion = Step-Version -Version $ExistingVersion -By $StepVersion
         $PrereleaseTag = '%%%REMOVE%%%%'
@@ -315,18 +318,20 @@ function Update-Module {
         $PrereleaseTag = $SetPrerelease
     }
 
-
     # Update Module Manifest
     $UpdateSplat = @{
         Path = $script:ModuleManifest
         FunctionsToExport = $FunctionsToExport
         AliasesToExport = $AliasesToExport
-        Prerelease = $PrereleaseTag
         ModuleVersion = $ModuleVersion
         ProjectUri = $ProjectURI
         LicenseUri = $LicenseURI
         IconUri = $IconURI
         HelpInfoUri = $HelpInfoURI
+    }
+
+    if(-not[String]::IsNullOrWhiteSpace($PrereleaseTag)){
+        $UpdateSplat['Prerelease'] = $PrereleaseTag
     }
 
     # Rebuild Assemblies if required
@@ -363,5 +368,5 @@ function Update-Module {
     Save-FunctionMarkdownList -Version "$ModuleVersion $PrereleaseTag"
 }
 
-Update-Module -UpdateFunctionsAndAliases -RemovePrerelease
+Update-Module -UpdateFunctionsAndAliases -SetPrerelease "prerelease-005"
 

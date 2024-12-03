@@ -1,6 +1,6 @@
 using namespace System.IO
 using namespace System.Collections.Generic
-function Convert-FontGlyphsToSVGsWithFontTools {
+function Convert-FontGlyphsToSVGs {
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseApprovedVerbs', '')]
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingCmdletAliases', '')]
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', '')]
@@ -35,19 +35,20 @@ function Convert-FontGlyphsToSVGsWithFontTools {
         [String[]] $LiteralPath,
         [String] $OutputSubdirectoryName = "Extracted SVGs",
         [Switch] $RunSVGOAfterConversion,
+        [Switch] $CropSVGsAfterConversion,
         [Int32] $MaxThreads = 16
     )
 
     begin {
-        $CMDFonts2SVG = Get-CommandFonts2SVG -ErrorAction SilentlyContinue
-        $CMDSVGO = Get-CommandFonts2SVG -ErrorAction SilentlyContinue
-        if(-not$CMDFonts2SVG){
-            Write-Error "Python FontTools fonts2svg.exe cannot be found. Install the FontTools VENV in $env:FM_PY_VENV\FontTools"
+
+        if(-not(Test-Path -LiteralPath "$env:FM_PY_VENV\FontTools\Scripts\Activate.ps1")){
+            Write-Error "FontTools VENV is missing. Install it and try again."
             return
         }
-        else {
-            & "$env:FM_PY_VENV\FontTools\Scripts\Activate.ps1"
-        }
+        & "$env:FM_PY_VENV\FontTools\Scripts\Activate.ps1"
+        $CMDFonts2SVG = Get-Command fonts2svg.exe -CommandType Application -ErrorAction Stop
+
+
         $FontList = [System.Collections.Generic.HashSet[string]]::new()
     }
 
@@ -65,16 +66,11 @@ function Convert-FontGlyphsToSVGsWithFontTools {
                 if($ChildFonts){
                     foreach ($Font in $ChildFonts) {
                         $FoundFont = $Font.FullName
-                        New-LogSpectre -Message "[#93989f]Adding found font ([/][#ffffff]$FoundFont[/][#93989f]) to list of fonts to process.[/]" -Level SUCCESS
                         $null = $FontList.Add($FoundFont)
                     }
                 }
-                else {
-                    Write-SpectreHost "[#93989f]No font files exist in currently processed directory:[/] [#ffffff]($CurrentPath)[/]"
-                }
             } elseif(Test-Path -LiteralPath $CurrentPath -PathType Leaf) {
                 if($CurrentPath -match "\.(ttf|otf)$") {
-                    New-LogSpectre -Message "[#93989f]Adding found font ([/][#ffffff]$CurrentPath[/][#93989f]) to list of fonts to process.[/]" -Level SUCCESS
                     $null = $FontList.Add($CurrentPath)
                 }
             }
@@ -83,20 +79,45 @@ function Convert-FontGlyphsToSVGsWithFontTools {
 
     end {
 
+        $DestSVGDirectories = [System.Collections.Generic.List[String]]@()
+
         $FontList | ForEach-Object {
             $CurrentFont = $_
-            $OutputSubdirectory = $Using:OutputSubdirectoryName
             $CurrentFontDirectory = [System.IO.Path]::GetDirectoryName($CurrentFont)
             $CurrentFontFilename = [System.IO.Path]::GetFileName($CurrentFont)
             $CurrentFontFilenameBase = [System.IO.Path]::GetFileNameWithoutExtension($CurrentFont)
 
-            $DestPath = [System.IO.Path]::Combine($CurrentFontDirectory, "$CurrentFontFilenameBase $OutputSubdirectory")
+            $DestPath = [System.IO.Path]::Combine($CurrentFontDirectory, "$CurrentFontFilenameBase $OutputSubdirectoryName")
             $DestPath = Get-UniqueNameIfDuplicate -LiteralPath $DestPath
             New-Item -Path $DestPath -ItemType Directory -Force
 
             $Prams = $CurrentFont, "-o", $DestPath
-            & $CMDFonts2SVG $Prams
+            & $CMDFonts2SVG $Prams | Out-Null
 
+            $null = $DestSVGDirectories.Add($DestPath)
+
+        }
+
+        if($RunSVGOAfterConversion){
+            $CMDSVGO = Get-CommandSVGO -ErrorAction Stop
+            foreach ($OutputDirectory in $DestSVGDirectories) {
+                $SVGOParams = "-rf", $OutputDirectory
+                & $CMDSVGO $SVGOParams | Out-Null
+            }
+        }
+
+        if($CropSVGsAfterConversion){
+            $CMDInkscape = Get-CommandInkscape -ErrorAction Stop
+            $InkActions = [System.Collections.Generic.List[String]]@()
+            foreach ($Dir in $DestSVGDirectories) {
+                $SVGFiles = Get-ChildItem -LiteralPath $Dir -Recurse -Filter *.svg -Force | % { $_.FullName }
+                $SVGFiles | % {
+                    $InkActions.Add("file-open:$_; export-area-drawing; export-filename:$_; export-do`r`n")
+                }
+                $InkActions.Add("`r`nquit")
+                $InkParams = "--shell"
+                $InkActions | & $CMDInkscape $InkParams | Out-Null
+            }
         }
     }
 }

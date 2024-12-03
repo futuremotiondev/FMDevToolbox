@@ -6,7 +6,7 @@ function Switch-NodeVersionsWithNVM {
         [CompletionsNodeVersions()]
         [ValidateNotNullOrEmpty()]
         [String] $Version,
-        [Switch] $ShowNVMOutput
+        [Switch] $HideNVMOutput
     )
 
     [String[]] $NodeVersions = Get-NVMNodeVersions
@@ -21,14 +21,12 @@ function Switch-NodeVersionsWithNVM {
     }
 
     $NVMCmd = Get-CommandNVM -ErrorAction Stop
-    Write-SpectreHost "[#9fa3a6]Switching your active NodeJS version to[/] [#73e7a5]v$ActiveVersion[/]"
-    if($ShowNVMOutput){
-        & $NVMCmd use $Version
-    }
-    else {
+    Write-SpectreHost "[#9fa3a6]Switching your active NodeJS version to[/] [#73e7a5]v$Version[/]"
+    if($HideNVMOutput){
         $null = & $NVMCmd use $Version 2>&1
     }
-
+    else {
+        & $NVMCmd use $Version
+    }
     while (-not(Test-Path -LiteralPath "$env:NVM_SYMLINK")) {}
-
 }
