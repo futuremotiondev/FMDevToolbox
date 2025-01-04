@@ -1,13 +1,9 @@
 function Test-FileIsLocked {
-
     [cmdletbinding(DefaultParameterSetName = 'Path')]
-
     param(
-
         [Parameter(
             Mandatory = $true,
             Position = 0,
-            ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true,
             ParameterSetName = "Path"
         )]

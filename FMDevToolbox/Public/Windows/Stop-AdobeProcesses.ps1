@@ -1,10 +1,6 @@
 ﻿function Stop-AdobeProcesses {
-
-    Get-Process -Name Adobe* | Stop-Process -Force
-    Get-Process -Name CCLibrary | Stop-Process -Force
-    Get-Process -Name CCXProcess | Stop-Process -Force
-    Get-Process -Name CoreSync | Stop-Process -Force
-    Get-Process -Name AdobeIPCBroker | Stop-Process -Force
-    Get-Process -Name Adobe CEF Helper | Stop-Process -Force
-
+    Get-Process * | Where-Object {($_.CompanyName -match "Adobe" -or $_.Path -match "Adobe") `
+                -and (($_.ProcessName -ne 'Photoshop') `
+                -and ($_.ProcessName -ne 'Illustrator'))} `
+                | Stop-Process -Force
 }

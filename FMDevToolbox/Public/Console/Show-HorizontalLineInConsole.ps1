@@ -1,9 +1,7 @@
-﻿using module "..\..\Private\Completions\Completers.psm1"
-function Show-HorizontalLineInConsole {
+﻿function Show-HorizontalLineInConsole {
     param (
         [string] $RuleCharacter = "─",
-        [CompletionsSpectreColors()]
-        [String] $ForeColor="#565656",
+        [String] $ForeColor="#4B5056",
         [Int32] $Width = $Host.UI.RawUI.WindowSize.Width
     )
 

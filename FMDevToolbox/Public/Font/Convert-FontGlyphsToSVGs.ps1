@@ -1,6 +1,6 @@
 using namespace System.IO
 using namespace System.Collections.Generic
-function Convert-FontGlyphsToSVGs {
+function Convert-FontGlyphsToSVG {
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseApprovedVerbs', '')]
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingCmdletAliases', '')]
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', '')]
@@ -9,7 +9,6 @@ function Convert-FontGlyphsToSVGs {
         [Parameter(
             Mandatory,
             Position = 0,
-            ValueFromPipeline,
             ValueFromPipelineByPropertyName,
             ParameterSetName = "Path",
             HelpMessage="Path to one or more locations."

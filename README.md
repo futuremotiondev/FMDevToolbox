@@ -154,7 +154,7 @@ Find-SeparatorInList
 #### Logging
 
 ```
-New-LogANSI
+New-Log
 New-LogSpectre
 ```
 
@@ -309,7 +309,7 @@ Remove-WindowsInvalidFilenameCharacters
 Rename-SanitizeFilenames
 Rename-SanitizeFilenamesInFolder
 Request-ExplorerRefresh
-Request-WindowsAdminRights
+Invoke-SelfElevate
 Request-WindowsExplorerRefresh
 Request-WindowsExplorerRefreshAlt
 Resolve-WindowsSIDToIdentifier

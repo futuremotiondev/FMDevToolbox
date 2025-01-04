@@ -14,7 +14,6 @@ function Format-ObjectSortNumerical {
     )
 
     begin {
-
         $InnerInputObject = [System.Collections.Generic.List[Object]]@()
     }
 
@@ -27,7 +26,7 @@ function Format-ObjectSortNumerical {
     end {
         $InnerInputObject | Sort-Object -Property `
         @{  Expression = {
-                [Regex]::Replace($_, '(\d+)', { "{0:D$MaximumDigitCount}" -f [Int16] $Args[0].Value })
+                [Regex]::Replace($_, '(\d+)', { "{0:D$MaximumDigitCount}" -f [Int32] $Args[0].Value })
             }
         },
         @{ Expression = { $_ } } -Descending:$Descending

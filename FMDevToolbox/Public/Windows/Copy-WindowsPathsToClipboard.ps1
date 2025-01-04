@@ -26,7 +26,7 @@ function Copy-WindowsPathsToClipboard {
     process {
         foreach ($Path in $LiteralPath) {
             if (Test-Path -LiteralPath $Path) {
-                $FileList.Add($Path)
+                $null = $FileList.Add($Path)
             }
             else{
                 Write-Warning -Message "Passed path or file does not exist on disk. ($Path)" -WarningAction Continue
@@ -75,7 +75,7 @@ function Copy-WindowsPathsToClipboard {
                     else{ $FinalPath = $_ }
                 }
                 if(!$NoQuotes){ $FinalPath = "`"$FinalPath`"" }
-                $ListFile.Add($FinalPath)
+                $null = $ListFile.Add($FinalPath)
 
             } -ThrottleLimit $MaxThreads
 
@@ -92,3 +92,4 @@ function Copy-WindowsPathsToClipboard {
 
     }
 }
+

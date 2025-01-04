@@ -60,7 +60,7 @@
         [Array]$LSuffixes = ( "Bytes", "Kilobytes", "Megabytes",
             "Gigabytes", "Terrabytes", "Petabytes",
             "Exabytes", "Zettabytes", "Yottabytes" )
-        [Array]$SSuffixes = ("B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
+        [Array]$SSuffixes = ("Bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
         [Array]$SuffixesToUse = $SSuffixes
 
         switch ($PsCmdlet.ParameterSetName) {
@@ -86,7 +86,9 @@
             }
         }
 
-        "{0:N$DecmialPlaces} {1}" -f $Bytes, $SuffixesToUse[$Unit]
+        # "{0:N$DecmialPlaces} {1}" -f $Bytes, $SuffixesToUse[$Unit]
+        $formatString = if ($Unit -eq 0) { "{0:N0} {1}" } else { "{0:N$DecmialPlaces} {1}" }
+        $formatString -f $Bytes, $SuffixesToUse[$Unit]
     }
 
 

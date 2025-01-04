@@ -1,25 +1,36 @@
 ﻿using module "..\..\Private\Completions\Completers.psm1"
-function Get-PrivateModuleFunctions {
+function Get-ModulePrivateFunctions {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory,Position=0,ValueFromPipeline)]
-        [CompletionsModuleEnumeration()]
-        [string[]] $Module
+        [AvailableModulesCompleter()]
+        [string[]] $Name
     )
-    foreach ($Name in $Module) {
-        $mod = $null
-        Write-Verbose "Processing Module '$Name'"
-        $mod = Get-Module -Name $Name -ErrorAction SilentlyContinue
-        if (-not $mod) {
-            Write-Error "Module '$Name' not found"
-            continue
+    process {
+        foreach ($Module in $Name) {
+
+            if(-not(Test-ModuleIsLoaded -Name $Module)){
+                try {
+                    Import-Module -Name $Module -Force
+                }
+                catch {
+                    Write-Error "Unable to import module $Module. Aborting."
+                    continue
+                }
+            }
+
+            $ModuleInstance = Get-Module -Name $Module -ErrorAction SilentlyContinue
+            if (-not $ModuleInstance) {
+                Write-Error "Module '$Module' not found. Aborting."
+                continue
+            }
+
+            $ScriptBlock = { $ExecutionContext.InvokeCommand.GetCommands('*', 'Function', $true) }
+            $PublicFunctions = $ModuleInstance.ExportedCommands.GetEnumerator() |
+                Select-Object -ExpandProperty Value | Select-Object -ExpandProperty Name
+
+            $PrivateFunctionsObject = & $ModuleInstance $ScriptBlock | Where-Object {$_.Source -eq $Module -and $_.Name -notin $PublicFunctions}
+            $PrivateFunctionsObject
         }
-        $ScriptBlock = {
-            $ExecutionContext.InvokeCommand.GetCommands('*', 'Function', $true)
-        }
-        $PublicFunctions = $mod.ExportedCommands.GetEnumerator() |
-            Select-Object -ExpandProperty Value |
-            Select-Object -ExpandProperty Name
-        & $mod $ScriptBlock | Where-Object {$_.Source -eq $Name -and $_.Name -notin $PublicFunctions}
     }
 }

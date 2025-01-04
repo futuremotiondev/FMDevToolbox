@@ -29,7 +29,6 @@
         }
 
         Write-Verbose -Message "FontTools activation script has been located. Activating the venv now."
-        New-Log -Message "FontTools activation script has been located. Activating the venv now." -Level SUCCESS
 
         #  ACTIVATE FONTTOOLS VENV  ////////////////////////////////////////////////////////////////////#
         #///////////////////////////////////////////////////////////////////////////////////////////////#
@@ -41,21 +40,18 @@
             throw "There was an error activating the FontTools virtual environment ($VENVLocation\Scripts\Activate.ps1). Make sure the VENV is properly configured."
         }
 
-        New-Log -Message "The FontTools Virtual Environment has been Activated." -Level SUCCESS
         Write-Verbose -Message "The FontTools Virtual Environment has been Activated."
 
 
         #  BEGIN CHECK FOR FTCLI.EXE  //////////////////////////////////////////////////////////////#
         #///////////////////////////////////////////////////////////////////////////////////////////#
 
-        New-Log -Message "Geting the ftcli.exe command (Font Tools)" -Level INFO
         Write-Verbose -Message "Geting the ftcli.exe command (Font Tools)"
         $CMDFTCLI = Get-Command -Name "$env:FM_PY_VENV\FontTools\Scripts\ftcli.exe" -CommandType Application -ErrorAction SilentlyContinue
         if(-not($CMDFTCLI)){
             throw "Can't find ftcli.exe in the FontTools VENV. Make sure FontTools is installed correctly."
         }
 
-        New-Log -Message "ftcli.exe was found in the FontTools VENV" -Level SUCCESS
         Write-Verbose -Message "SUCCESS: ftcli.exe was found in the FontTools VENV"
 
         if($Method -eq '1' -or "FamilyNameStyleName"){ $MethodNum = 1 }
@@ -94,26 +90,24 @@
                     Where-Object { $_.Extension -in $ValidFontArray } | ForEach-Object {$_.FullName}
 
                 if($FolderContents.Count -eq 0){
-                    New-Log -Message "Passed folder ($Obj) doesn't contain any valid font files to rename." -Level INFO
+                    Write-Warning "Passed folder ($Obj) doesn't contain any valid font files to rename."
                     continue
                 }
                 try {
-                    New-Log -Message "Renaming the folder ($Obj) now with ftcli.exe" -Level INFO
+                    Write-Warning -Message "Renaming the folder ($Obj) now with ftcli.exe"
                     & $CMDFTCLI @($CurParams) | Out-Null
                 }
                 catch {
-                    New-Log -Message "Renaming the folder ($Obj) failed." -Level ERROR -ErrorAction Continue
                     Write-Error "Renaming the folder ($Obj) failed." -ErrorAction Continue
                     continue
                 }
             }
             else {
                 try {
-                    New-Log -Message "Renaming the file ($Obj) now with ftcli.exe" -Level INFO
+                    Write-Verbose -Message "Renaming the file ($Obj) now with ftcli.exe"
                     & $CMDFTCLI @($CurParams) | Out-Null
                 }
                 catch {
-                    New-Log -Message "Renaming the file ($Obj) failed." -Level ERROR -ErrorAction Continue
                     Write-Error "Renaming the file ($Obj) failed. Details: $_" -ErrorAction Continue
                     continue
                 }

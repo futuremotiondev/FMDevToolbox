@@ -9,13 +9,13 @@ function Convert-OptimizeSVGsWithSVGO {
         [Parameter(
             Mandatory,
             Position = 0,
-            ValueFromPipeline,
             ValueFromPipelineByPropertyName,
             ParameterSetName = "Path",
             HelpMessage="Path to one or more locations."
         )]
         [SupportsWildcards()]
         [ValidateNotNullOrEmpty()]
+
         [String[]] $Path,
         [Parameter(
             Mandatory,
@@ -38,10 +38,14 @@ function Convert-OptimizeSVGsWithSVGO {
     )
 
     begin {
+
         if($PlaceInSubfolder -and $Overwrite){
             Write-Error "-PlaceInSubfolder and -Overwrite switches cannot be used together."
             return
         }
+
+
+
         $LatestNode = Get-NVMLatestNodeVersionInstalled
         Switch-NodeVersionsWithNVM -Version $LatestNode | Out-Null
 

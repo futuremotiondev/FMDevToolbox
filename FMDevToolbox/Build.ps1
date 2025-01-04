@@ -278,10 +278,6 @@ function Update-Module {
     $ExistingVersion = $Manifest.ModuleVersion
     $ExistingPrerelease = $Manifest.PrivateData['PSData'].Prerelease
 
-    if(-not(Test-Path -LiteralPath $script:ChangelogPath -PathType Container)){
-        New-Changelog -Path $script:ChangelogPath
-    }
-
     if($UpdateFunctionsAndAliases){
 
         $ExportedMembers = Update-ModuleFunctionsAndAliases
@@ -289,15 +285,6 @@ function Update-Module {
         $AliasesToExport = $ExportedMembers.Aliases
         $NewFunctions = $ExportedMembers.Functions
         $NewAliases = $ExportedMembers.Aliases
-
-        foreach ($NewFunction in $NewFunctions) {
-            Add-ChangelogData -Type "Added" -Data "New function '$NewFunction'" -Path $script:ChangelogPath
-        }
-        if($ChangelogData){
-            foreach ($Change in $ChangelogData) {
-                Add-ChangelogData -Type $Change['Type'] -Data $Change['Data'] -Path $script:ChangelogPath
-            }
-        }
     }
 
 
@@ -368,5 +355,5 @@ function Update-Module {
     Save-FunctionMarkdownList -Version "$ModuleVersion $PrereleaseTag"
 }
 
-Update-Module -UpdateFunctionsAndAliases -SetPrerelease "prerelease-005"
+Update-Module -UpdateFunctionsAndAliases -SetPrerelease "prerelease-006"
 

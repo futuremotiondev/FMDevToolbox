@@ -43,6 +43,32 @@
                 "close": true
             },
             "group": "none"
-        }
+        },
+        {
+            "label": "Echo vars",
+            "command": "echo",
+            "args": [
+                "User Home:                  ${userHome}",
+                "Workspace Folder:           ${workspaceFolder}",
+                "Workspace Folder Basename:  ${workspaceFolderBasename}",
+                "File:                       ${file}",
+                "File Workspace Folder:      ${fileWorkspaceFolder}",
+                "Relative File:              ${relativeFile}",
+                "Relative File Dirname:      ${relativeFileDirname}",
+                "File Basename:              ${fileBasename}",
+                "File Basename No Extension: ${fileBasenameNoExtension}",
+                "File Extension:             ${fileExtname}",
+                "File Dirname:               ${fileDirname}",
+                "File Dirname Basename:      ${fileDirnameBasename}",
+                "CWD:                        ${cwd}",
+                "Line Number:                ${lineNumber}",
+                "Selected Text:              ${selectedText}",
+                "Exec Path:                  ${execPath}",
+                "Default Build Task:         ${defaultBuildTask}",
+                "Path Separator:             ${pathSeparator}",
+                "Path Separator Alias:       ${/}"
+            ],
+            "type": "shell"
+        },
     ]
 }

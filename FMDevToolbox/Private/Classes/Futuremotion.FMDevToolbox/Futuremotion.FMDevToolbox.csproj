@@ -8,6 +8,11 @@
   <ItemGroup>
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.6" />
+    <PackageReference Include="Spectre.Console" Version="0.49.1" />
+    <PackageReference Include="Spectre.Console.ImageSharp" Version="0.49.1" />
+    <PackageReference Include="Spectre.Console.Json" Version="0.49.1" />
+    <Reference Include="lib\someLib.dll" />
     <PackageReference Include="System.Management.Automation" Version="7.2.24" />
   </ItemGroup>
 </Project>

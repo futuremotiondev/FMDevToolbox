@@ -54,7 +54,6 @@
         [Parameter(
             Mandatory,
             Position = 0,
-            ValueFromPipeline,
             ValueFromPipelineByPropertyName,
             ParameterSetName = "Path",
             HelpMessage="Path to one or more locations."

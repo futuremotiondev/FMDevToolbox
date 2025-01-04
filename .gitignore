@@ -68,7 +68,6 @@ lerna-debug.log*
 
 # Custom rules here
 Scripts/
-Lib/
 FMDevToolbox.Working
 FMDevToolbox.Tests/Packages
 *.psd

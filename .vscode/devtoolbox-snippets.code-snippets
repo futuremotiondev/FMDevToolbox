@@ -1,0 +1,10 @@
+{
+    "Shortcut: Add Completers Using Definition": {
+        "prefix": ["completers","using","using-module-completers"],
+        "body": [
+            "using module \"..\\..\\Private\\Completions\\Completers.psm1\""
+        ],
+        "description": "Shortcut: Add Completers Using Definition",
+        "scope": "powershell"
+    }
+}
