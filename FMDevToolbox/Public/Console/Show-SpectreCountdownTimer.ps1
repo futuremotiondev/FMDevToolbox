@@ -1,4 +1,4 @@
-﻿using module "..\..\Private\Completions\Completers.psm1"
+﻿using module "..\..\Private\Completions\FMCompleters.psm1"
 
 using namespace Spectre.Console
 function Show-SpectreCountdownTimer {
@@ -13,7 +13,7 @@ function Show-SpectreCountdownTimer {
         [String] $FormatString = "Waiting for {0}...",
         [CompletionsSpectreColors()]
         [String] $SpinnerColor = "#6d9bff",
-        [ValidateSet([ValidateSpectreSpinnerTypes], ErrorMessage = "Value '{0}' is invalid. Try one of: {1}")]
+        [ValidateSet([ValidateSpectreSpinners], ErrorMessage = "Value '{0}' is invalid. Try one of: {1}")]
         [Spinner] $SpinnerStyle = [Spinner+Known]::Dots2,
         [String] $FormatSeparator = ':',
         [Switch] $AutoSuffixValues,

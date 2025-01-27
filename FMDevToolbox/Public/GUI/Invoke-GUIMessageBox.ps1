@@ -26,27 +26,10 @@ function Invoke-GUIMessageBox {
         [String]
         $DefaultButton='Button1'
     )
-
-    Begin {
-        #Enable visual styles
-
-
-        #Enable DPI awareness
-$code = @"
-    [System.Runtime.InteropServices.DllImport("user32.dll")]
-    public static extern bool SetProcessDPIAware();
-"@
-        $Win32Helpers = Add-Type -MemberDefinition $code -Name "Win32Helpers" -PassThru
-        $null = $Win32Helpers::SetProcessDPIAware()
+    begin {
+        Add-GUIAssembliesAndEnableVisualStyles
     }
-
-    Process {
-        [Application]::EnableVisualStyles()
-        $Result = [System.Windows.Forms.MessageBox]::Show($this, $Message, $Title, $Buttons, $Icon, $DefaultButton)
-        $Result
-    }
-
-    End {
-
+    process {
+        [System.Windows.Forms.MessageBox]::Show($this, $Message, $Title, $Buttons, $Icon, $DefaultButton)
     }
 }

@@ -9,18 +9,17 @@ function Convert-OptimizeSVGsWithSVGO {
         [Parameter(
             Mandatory,
             Position = 0,
+            ValueFromPipeline,
             ValueFromPipelineByPropertyName,
             ParameterSetName = "Path",
             HelpMessage="Path to one or more locations."
         )]
         [SupportsWildcards()]
         [ValidateNotNullOrEmpty()]
-
         [String[]] $Path,
         [Parameter(
             Mandatory,
             Position = 0,
-            ValueFromPipeline,
             ValueFromPipelineByPropertyName,
             ParameterSetName = "LiteralPath",
             HelpMessage="Literal path to one or more locations."
@@ -34,7 +33,8 @@ function Convert-OptimizeSVGsWithSVGO {
         [String[]] $LiteralPath,
         [Switch] $PlaceInSubfolder,
         [Switch] $Overwrite,
-        [String] $OutputSubdirectoryName = "SVGO Optimized"
+        [String] $OutputSubdirectoryName = "SVGO Optimized",
+        [Switch] $SwitchToLatestNode
     )
 
     begin {
@@ -44,10 +44,17 @@ function Convert-OptimizeSVGsWithSVGO {
             return
         }
 
-
-
-        $LatestNode = Get-NVMLatestNodeVersionInstalled
-        Switch-NodeVersionsWithNVM -Version $LatestNode | Out-Null
+        if($PSBoundParameters.ContainsKey('SwitchToLatestNode')){
+            try{
+                $nvmCmd = Get-CommandNVM
+            }
+            catch {
+                throw "NVM.exe can't be found in PATH. Can't switch to the latest node version."
+            }
+            $CurrentNode = (Get-NodeInstalledVersions | Where-Object {$_.Active -eq $true}).Version
+            $LatestNode = Get-NVMLatestNodeVersionInstalled
+            Switch-NodeVersionsWithNVM -Version $LatestNode | Out-Null
+        }
 
         $CMDSVGO = Get-CommandSVGO -ErrorAction Stop
         $SVGFileList = [System.Collections.Generic.HashSet[string]]::new()

@@ -7,7 +7,6 @@ $script:ModuleRoot = $PSScriptRoot
 $script:ModuleName = $script:ModuleRoot.Split('\')[-1]
 $script:ModulePublic = "$script:ModuleRoot\Public"
 $script:ModuleLib = "$script:ModuleRoot\Lib"
-$script:ModuleClasses = "$script:ModuleRoot\Private\Classes"
 $script:ModuleManifest = "$script:ModuleRoot\$script:ModuleName.psd1"
 $script:RepoRoot = (Resolve-Path -Path "$PSScriptRoot/..").Path
 $script:DocsRoot = (Resolve-Path -Path "$script:RepoRoot/$script:ModuleName.Docs").Path
@@ -33,7 +32,8 @@ function Install-ModuleDependencies {
     function InstallInternalPackage {
         [CmdletBinding()]
         param (
-            [Parameter(Mandatory, Position=0)] $PackageName,
+            [Parameter(Mandatory, Position=0)]
+            [string] $PackageName,
             [string] $InstallPath,
             [string] $SourcePath,
             [string] $TargetFramework = 'net6.0',
@@ -43,8 +43,8 @@ function Install-ModuleDependencies {
 
         if(-not($DotnetVersion)){ $DotnetVersion = 8 }
         if(-not($AssemblyName)){ $AssemblyName = "$PackageName.dll" }
-        if(-not($InstallPath)){ $InstallPath = (Join-Path $script:ModuleLib $PackageName $TargetFramework) }
-        if(-not($SourcePath)){ $SourcePath = (Join-Path $script:ModuleClasses $PackageName) }
+        if(-not($InstallPath)){ $InstallPath = [System.IO.Path]::Combine($script:ModuleLib, $PackageName, $TargetFramework) }
+        if(-not($SourcePath)){ $SourcePath = [System.IO.Path]::Combine($script:ModuleRoot, 'Src', $PackageName) }
 
         $PreviousPath = Join-Path $script:ModuleLib $PackageName
         Remove-Item $PreviousPath -Recurse -Force -EA SilentlyContinue
@@ -78,6 +78,7 @@ function Install-ModuleDependencies {
 
     function InstallNugetPackage {
         [CmdletBinding()]
+        [OutputType([String])]
         param (
             [string] $InstallPath,
             [string] $PackageName,
@@ -258,7 +259,8 @@ function Step-Prerelease {
     }
 }
 
-function Update-Module {
+function Update-FMModule {
+    [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
     param (
         [Switch] $UpdateFunctionsAndAliases,
         [Switch] $StepPrerelease,
@@ -326,7 +328,7 @@ function Update-Module {
         $InternalPackages = @{
             'Futuremotion.FMDevToolbox' = @{
                 InstallPath = "Futuremotion.FMDevToolbox\net6.0"
-                SourcePath = "$script:ModuleRoot\Private\Classes\Futuremotion.FMDevToolbox"
+                SourcePath = "$script:ModuleRoot\Src\FMDevToolbox"
                 DotnetVersion = 8
             }
         }
@@ -355,5 +357,5 @@ function Update-Module {
     Save-FunctionMarkdownList -Version "$ModuleVersion $PrereleaseTag"
 }
 
-Update-Module -UpdateFunctionsAndAliases -SetPrerelease "prerelease-006"
+Update-FMModule -UpdateFunctionsAndAliases -SetPrerelease "prerelease-006"
 

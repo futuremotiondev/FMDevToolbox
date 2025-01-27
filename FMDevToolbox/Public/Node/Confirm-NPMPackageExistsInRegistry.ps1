@@ -1,9 +1,7 @@
 ﻿using namespace System.Text.RegularExpressions
 function Confirm-NPMPackageExistsInRegistry {
     [CmdletBinding()]
-    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseApprovedVerbs', '')]
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingCmdletAliases', '')]
-    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', '')]
     param (
         [Parameter(
             Mandatory,

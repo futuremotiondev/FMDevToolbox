@@ -54,8 +54,9 @@ URL: https://github.com/futuremotiondev
 function Convert-PlaintextListToPowershellArray {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)]
+        [Parameter(Position=0,ValueFromPipeline,ValueFromPipelineByPropertyName)]
         [string[]] $ListItems,
+        [Switch] $GetListItemsFromClipboard,
         [Switch] $CopyToClipboard,
         [Switch] $StripQuotes,
         [ValidateSet('Ascending','Descending')]
@@ -71,6 +72,9 @@ function Convert-PlaintextListToPowershellArray {
         [Switch] $FilenamesOnly
     )
 
+    if($PSBoundParameters.ContainsKey('GetListItemsFromClipboard')){
+        $ListItems = Get-Clipboard
+    }
     if ($StripQuotes) { $ListItems = $ListItems.Trim('"') }
     if ($FilenamesOnly) {
         $ListItems = $ListItems | ForEach-Object { [System.IO.Path]::GetFileNameWithoutExtension($_) }
@@ -90,3 +94,6 @@ function Convert-PlaintextListToPowershellArray {
     }
     if(!$NoOutput){ $Output }
 }
+
+
+#Convert-PlaintextListToPowershellArray

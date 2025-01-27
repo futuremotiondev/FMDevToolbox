@@ -73,3 +73,6 @@ FMDevToolbox.Tests/Packages
 *.psd
 FMDevToolbox.Docs/Generated
 Depreciated/
+TempHistory/
+*.code-snippets
+FMDevToolbox/Src/FMDevToolbox/working/

@@ -54,15 +54,7 @@ function Invoke-SaveFileDialog {
 
     )
 
-    [System.Windows.Forms.Application]::EnableVisualStyles()
-
-    #Enable DPI awareness
-$code = @"
-[System.Runtime.InteropServices.DllImport("user32.dll")]
-public static extern bool SetProcessDPIAware();
-"@
-    $Win32Helpers = Add-Type -MemberDefinition $code -Name "Win32Helpers" -PassThru
-    $null = $Win32Helpers::SetProcessDPIAware()
+    Add-GUIAssembliesAndEnableVisualStyles
 
     $SaveFileDialog = New-Object System.Windows.Forms.SaveFileDialog
 

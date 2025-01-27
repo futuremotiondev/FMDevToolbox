@@ -1,4 +1,4 @@
-﻿using module "..\..\Private\Completions\Completers.psm1"
+﻿using module "..\..\Private\Completions\FMCompleters.psm1"
 function Test-ModuleIsLoaded {
     <#
     .SYNOPSIS

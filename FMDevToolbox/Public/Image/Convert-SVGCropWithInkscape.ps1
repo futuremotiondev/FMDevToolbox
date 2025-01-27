@@ -9,6 +9,7 @@ function Convert-SVGCropWithInkscape {
         [Parameter(
             Mandatory,
             Position = 0,
+            ValueFromPipeline,
             ValueFromPipelineByPropertyName,
             ParameterSetName = "Path",
             HelpMessage="Path to one or more locations."
@@ -19,7 +20,6 @@ function Convert-SVGCropWithInkscape {
         [Parameter(
             Mandatory,
             Position = 0,
-            ValueFromPipeline,
             ValueFromPipelineByPropertyName,
             ParameterSetName = "LiteralPath",
             HelpMessage="Literal path to one or more locations."
@@ -45,7 +45,6 @@ function Convert-SVGCropWithInkscape {
             Write-Error "-PlaceInSubfolder and -Overwrite switches cannot be used together." -ErrorAction continue
             return
         }
-
         $CMDInkscape = Get-Command inkscape.exe -CommandType Application -ErrorAction SilentlyContinue
         if(-not($CMDInkscape)){
             $CMDInkscape = Get-Command inkscape.com -CommandType Application -ErrorAction SilentlyContinue
@@ -115,10 +114,6 @@ function Convert-SVGCropWithInkscape {
                         ErrorAction = 'Ignore'
                     }
                     $DestFolderCopiedSuccess = Copy-Item @copyContainingSvgs
-
-
-                    [System.IO.File]::Copy($CurrentFolderFullName,
-
                     if(-not($DestFolderCopiedSuccess)){
                         Write-Error "Could not copy the SVGs in $CurrentFolderFullName to the destination folder ($DestFolder)."
                         continue

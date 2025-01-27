@@ -1,23 +1,14 @@
 ﻿function Get-CommandSVGO {
     [CmdletBinding()]
     param()
-    function Test-SVGOExistence {
-        param ([string]$Path)
-        return Get-Command $Path -CommandType Application -ErrorAction SilentlyContinue
-    }
+    $svgoCmd = Get-Command svgo.cmd -CommandType Application -EA 0
+    if($svgoCmd){
 
-    # Check for svgo.cmd in various locations
-    $Locations = @(
-        "svgo.cmd",
-        "${env:SystemDrive}\Program Files\nodejs\svgo.cmd"
-    )
-    foreach ($Location in $Locations) {
-        $CMD = Test-SVGOExistence -Path $Location
-        if ($CMD) { return $CMD }
     }
     # Check for NVM managed Node.js installations
     if (Confirm-NVMForWindowsIsInstalled) {
-        $NVMCmd = Get-CommandNVM -ErrorAction Stop
+
+        $NVMCmd = Get-Command nvm.exe -CommandType Application
         $CurrentNode = (& $NVMCmd current).TrimStart('v')
         $ValidNodeVersions = Get-NVMNodeVersions
 
@@ -44,11 +35,4 @@
             }
         }
     }
-    # Check for the executable release by Antonytm
-    $CMD = Test-SVGOExistence -Path "svgo-win.exe"
-    if ($CMD) {
-        Write-Warning "Found the executable release of SVGO by Antonytm (svgo-win.exe), but since it's unmaintained, things might break!"
-        return $CMD
-    }
-    throw "svgo.cmd cannot be located. Install it globally in Nodejs and make sure it's available in PATH."
 }

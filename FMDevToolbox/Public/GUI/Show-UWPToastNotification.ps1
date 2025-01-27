@@ -1,4 +1,4 @@
-﻿using module "..\..\Private\Completions\Completers.psm1"
+﻿using module "..\..\Private\Completions\FMCompleters.psm1"
 
 using namespace Microsoft.Toolkit.Uwp.Notifications
 using namespace System.Management.Automation
@@ -36,6 +36,7 @@ function Show-UWPToastNotification {
     )
 
     begin {
+        Add-UWPNotificationsAssembly
         $ContentBuilder = [Microsoft.Toolkit.Uwp.Notifications.ToastContentBuilder]::new()
     }
 

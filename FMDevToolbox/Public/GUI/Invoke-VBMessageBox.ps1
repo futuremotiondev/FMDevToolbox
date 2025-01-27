@@ -30,17 +30,7 @@ function Invoke-VBMessageBox {
         $NonTopMost
     )
 
-    Add-Type -AssemblyName System.Windows.Forms
-    [System.Windows.Forms.Application]::EnableVisualStyles()
-
-    #Enable DPI awareness
-$code = @"
-[System.Runtime.InteropServices.DllImport("user32.dll")]
-public static extern bool SetProcessDPIAware();
-"@
-    $Win32Helpers = Add-Type -MemberDefinition $code -Name "Win32Helpers" -PassThru
-    $null = $Win32Helpers::SetProcessDPIAware()
-
+    Add-GUIAssembliesAndEnableVisualStyles
 
     switch ($Icon) {
         "Question"          { $vb_icon = [microsoft.visualbasic.msgboxstyle]::Question }
@@ -48,7 +38,6 @@ public static extern bool SetProcessDPIAware();
         "Exclamation"       { $vb_icon = [microsoft.visualbasic.msgboxstyle]::Exclamation }
         "Information"       { $vb_icon = [microsoft.visualbasic.msgboxstyle]::Information }
     }
-
     switch ($BoxType) {
         "OKOnly"            { $vb_box = [microsoft.visualbasic.msgboxstyle]::OKOnly }
         "OKCancel"          { $vb_box = [microsoft.visualbasic.msgboxstyle]::OkCancel }
@@ -57,21 +46,17 @@ public static extern bool SetProcessDPIAware();
         "YesNo"             { $vb_box = [microsoft.visualbasic.msgboxstyle]::YesNo }
         "RetryCancel"       { $vb_box = [microsoft.visualbasic.msgboxstyle]::RetryCancel }
     }
-
     switch ($Defaultbutton) {
         1 { $vb_defaultbutton = [microsoft.visualbasic.msgboxstyle]::DefaultButton1 }
         2 { $vb_defaultbutton = [microsoft.visualbasic.msgboxstyle]::DefaultButton2 }
         3 { $vb_defaultbutton = [microsoft.visualbasic.msgboxstyle]::DefaultButton3 }
     }
-
     if($NonTopMost) {
         $vb_systemmodal = ''
     }else{
         $vb_systemmodal = [microsoft.visualbasic.msgboxstyle]::SystemModal
     }
-
     $popuptype = $vb_icon -bor $vb_box -bor $vb_systemmodal -bor $vb_defaultbutton
     $ans = [Microsoft.VisualBasic.Interaction]::MsgBox($Message, $popuptype, $title)
     return $ans
-
 }

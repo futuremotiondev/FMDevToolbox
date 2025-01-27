@@ -38,15 +38,7 @@ function Invoke-OokiiTaskDialog {
 
     )
 
-    [System.Windows.Forms.Application]::EnableVisualStyles()
-
-    #Enable DPI awareness
-$code = @"
-[System.Runtime.InteropServices.DllImport("user32.dll")]
-public static extern bool SetProcessDPIAware();
-"@
-    $Win32Helpers = Add-Type -MemberDefinition $code -Name "Win32Helpers" -PassThru
-    $null = $Win32Helpers::SetProcessDPIAware()
+    Add-GUIAssembliesAndEnableVisualStyles
 
     $CheckValidICO = {
         param (
@@ -62,22 +54,16 @@ public static extern bool SetProcessDPIAware();
     }
 
     $MainDialog = New-Object Ookii.Dialogs.WinForms.TaskDialog
-
     if($MainButtons) { $MainButtons = $MainButtons.Clone() }
-
     if(($MainButtons).Length -eq 0){
-
         $ContinueBtn = [Ookii.Dialogs.WinForms.TaskDialogButton]::New("Continue")
         $ContinueBtn.CommandLinkNote = "Proceed with new changes"
         $ContinueBtn.ElevationRequired = $true
-
         $CancelButton = [Ookii.Dialogs.WinForms.TaskDialogButton]::New("Cancel")
         $CancelButton.CommandLinkNote = "Cancel all current changes"
         $CancelButton.Default = $true
-
         $MainDialog.Buttons.Add($ContinueBtn)
         $MainDialog.Buttons.Add($CancelButton)
-
     }else{
         foreach ($Btn in $MainButtons) {
             $MainDialog.Buttons.Add($Btn)
