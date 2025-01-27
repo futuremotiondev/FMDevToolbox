@@ -117,11 +117,3 @@
     }
     end {}
 }
-
-# $MyHash = @{
-#     Key1 = 'Value1'
-#     Key2 = 'Value2'
-#     Key3 = 'Value3'
-# }
-
-# Format-Hashtable -Hashtable $MyHash -OutputFormat SingleLine -UseSpectreColoring

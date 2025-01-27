@@ -1,4 +1,4 @@
-function Request-WindowsExplorerRefresh {
+function Request-ExplorerRefreshV3 {
     param (
         [switch] $SendF5,
         [Int32] $SendF5Delay=150

@@ -1,4 +1,4 @@
-﻿function Request-WindowsExplorerRefreshAlt {
+﻿function Request-ExplorerRefreshV2 {
     param ()
 
 $code = @"

@@ -1,4 +1,4 @@
-function Remove-WindowsInvalidFilenameCharacters {
+function Remove-InvalidFilenameCharacters {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory,Position=0,ValueFromPipeline)]

@@ -1,6 +1,5 @@
 ﻿using namespace System.Diagnostics
 function Stop-PowershellProcesses {
-
     <#
     .SYNOPSIS
     Stops running PowerShell processes based on specified criteria.
@@ -70,7 +69,7 @@ function Stop-PowershellProcesses {
     Date: 01-18-2025
     #>
 
-    [CmdletBinding(DefaultParameterSetName="Default")]
+    [CmdletBinding(DefaultParameterSetName="Default", ConfirmImpact = "Medium", SupportsShouldProcess)]
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingCmdletAliases', '')]
     param (
         [Parameter(Position=0,HelpMessage="The version of Powershell to stop (All, Core, Desktop).",ParameterSetName="Default")]

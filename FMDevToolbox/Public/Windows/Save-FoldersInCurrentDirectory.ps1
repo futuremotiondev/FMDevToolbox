@@ -86,6 +86,6 @@ function Save-FoldersInCurrentDirectory {
     }
 
     # Refresh Windows Explorer to reflect changes
-    Request-WindowsExplorerRefresh
+    Request-ExplorerRefreshV3
 
 }

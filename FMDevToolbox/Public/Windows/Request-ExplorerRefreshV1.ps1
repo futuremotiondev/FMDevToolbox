@@ -1,4 +1,4 @@
-﻿function Request-ExplorerRefresh {
+﻿function Request-ExplorerRefreshV1 {
     $code = @'
 private static readonly IntPtr HWND_BROADCAST = new IntPtr(0xffff);
 private const uint WM_SETTINGCHANGE   = (uint)0x1a;

@@ -98,7 +98,7 @@ function Move-FontFamiliesToSubfolders {
 
             $FontFamilyNameScript = "$env:FM_PY_FONT_SCRIPTS\FontOpsGetFamilyNameNew.py"
             $FontFamilyName = & python $FontFamilyNameScript $CurrentFont
-            $FontFamilyName = Remove-WindowsInvalidFilenameCharacters $FontFamilyName
+            $FontFamilyName = Remove-InvalidFilenameCharacters $FontFamilyName
             $FontFamilyName = & $ConvertToTitleCaseIfUpperCase $FontFamilyName
 
             $FontBaseFilename = [System.IO.Path]::GetFileNameWithoutExtension($CurrentFont)
@@ -123,7 +123,7 @@ function Move-FontFamiliesToSubfolders {
 
         } -ThrottleLimit 5
 
-        Request-WindowsExplorerRefresh | Out-Null
+        Request-ExplorerRefreshV3 | Out-Null
 
         & deactivate
 

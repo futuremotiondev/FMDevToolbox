@@ -1,4 +1,4 @@
-﻿function Format-StringRemoveUnusualSymbols {
+﻿function Remove-UnusualSymbolsFromString {
     param (
         [parameter(Mandatory,Position=0,ValueFromPipeline,ValueFromPipelineByPropertyName)]
         [ValidateNotNullOrEmpty()]

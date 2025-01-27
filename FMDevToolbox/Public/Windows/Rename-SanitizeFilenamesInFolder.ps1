@@ -31,8 +31,8 @@
             if ($WhatToProcess -eq 'All' -or $WhatToProcess -eq 'Folders') {
                 $FoldersToRename = Get-ChildItem -LiteralPath $RootFolder -Directory -Recurse:$Recurse
                 $FoldersToRename | Sort-Object -Property FullName -Descending | ForEach-Object {
-                    $NewName = Format-StringRemoveUnusualSymbols -String $_.Name
-                    $NewName = Format-StringReplaceDiacritics -String $NewName
+                    $NewName = Remove-UnusualSymbolsFromString -String $_.Name
+                    $NewName = Remove-DiacriticsFromString -String $NewName
                     Rename-Item -LiteralPath $_.FullName -NewName $NewName | Out-Null
                 }
             }
@@ -40,8 +40,8 @@
             if ($WhatToProcess -eq 'All' -or $WhatToProcess -eq 'Files') {
                 $FilesToRename = Get-ChildItem -LiteralPath $RootFolder -File -Recurse:$Recurse
                 $FilesToRename | ForEach-Object {
-                    $NewName = Format-StringRemoveUnusualSymbols -String $_.Name
-                    $NewName = Format-StringReplaceDiacritics -String $NewName
+                    $NewName = Remove-UnusualSymbolsFromString -String $_.Name
+                    $NewName = Remove-DiacriticsFromString -String $NewName
                     Rename-Item -LiteralPath $_.FullName -NewName $NewName | Out-Null
                 }
             }

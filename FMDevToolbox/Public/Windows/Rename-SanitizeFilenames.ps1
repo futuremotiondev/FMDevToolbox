@@ -26,8 +26,8 @@
 
             $CurrentFileObject = Get-Item -LiteralPath $CurrentFile
 
-            $NewName = Format-StringRemoveUnusualSymbols -String $CurrentFileObject.Name
-            $NewName = Format-StringReplaceDiacritics -String $NewName
+            $NewName = Remove-UnusualSymbolsFromString -String $CurrentFileObject.Name
+            $NewName = Remove-DiacriticsFromString -String $NewName
             Rename-Item -LiteralPath $CurrentFileObject.FullName -NewName $NewName | Out-Null
 
         }

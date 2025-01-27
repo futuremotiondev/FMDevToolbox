@@ -3,19 +3,24 @@
     Converts JSXBIN files to JSX format.
 
 .DESCRIPTION
-    The ConvertFrom-JSXBINToJSX function processes JSXBIN files and converts them into JSX format. It supports outputting the converted file to a specified folder, subdirectory, or the same directory as the source file. Optionally, it can format the output using Prettier.
+    The ConvertFrom-JSXBINToJSX function processes JSXBIN files and converts them into JSX format.
+    It supports outputting the converted file to a specified folder, subdirectory, or the same
+    directory as the source file. Optionally, it can format the output using Prettier.
 
 .PARAMETER LiteralPath
     Specifies the path to the input JS or JSX file. This parameter is mandatory.
 
 .PARAMETER OutputFolder
-    Specifies the folder where the converted JSX file will be saved. This parameter is mandatory when using the "OutputFolder" parameter set.
+    Specifies the folder where the converted JSX file will be saved.
+    This parameter is mandatory when using the "OutputFolder" parameter set.
 
 .PARAMETER Subdirectory
-    Specifies the subdirectory within the source file's directory where the converted JSX file will be saved. This parameter is mandatory when using the "Subdirectory" parameter set.
+    Specifies the subdirectory within the source file's directory where the converted JSX file will be saved. T
+    his parameter is mandatory when using the "Subdirectory" parameter set.
 
 .PARAMETER SameFolder
-    Indicates that the converted JSX file should be saved in the same folder as the source file. This parameter is mandatory when using the "SameFolder" parameter set.
+    Indicates that the converted JSX file should be saved in the same folder as the source file.
+    This parameter is mandatory when using the "SameFolder" parameter set.
 
 .PARAMETER FormatWithPrettier
     If specified, formats the output JSX file using Prettier.

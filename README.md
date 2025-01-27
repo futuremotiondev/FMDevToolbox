@@ -236,8 +236,8 @@ Invoke-GalleryDLSaveGallery
 
 ```
 Format-String
-Format-StringRemoveUnusualSymbols
-Format-StringReplaceDiacritics
+Remove-UnusualSymbolsFromString
+Remove-DiacriticsFromString
 Join-StringByNewlinesWithDelimiter
 Remove-ANSICodesFromString
 Split-StringByDelimiter
@@ -272,7 +272,7 @@ Get-RandomAlphanumericString
 
 ```
 Confirm-PathIsAFile
-Confirm-PathIsIllegal
+Test-InvalidFilenameCharacters
 Confirm-PathIsSingleFile
 ```
 
@@ -305,13 +305,13 @@ Get-WindowsVersionDetails
 Get-WindowsWSLDistributionInfo
 Open-WindowsExplorerTo
 Register-WindowsDLLorOCX
-Remove-WindowsInvalidFilenameCharacters
+Remove-InvalidFilenameCharacters
 Rename-SanitizeFilenames
 Rename-SanitizeFilenamesInFolder
-Request-ExplorerRefresh
+Request-ExplorerRefreshV1
 Invoke-SelfElevate
-Request-WindowsExplorerRefresh
-Request-WindowsExplorerRefreshAlt
+Request-ExplorerRefreshV3
+Request-ExplorerRefreshV2
 Resolve-WindowsSIDToIdentifier
 Save-FoldersInCurrentDirectory
 Save-WindowsOpenDirectories
@@ -319,7 +319,7 @@ Set-WindowsFolderIcon
 Stop-AdobeProcesses
 Stop-PwshProcesses
 Test-WindowsIsAdmin
-Update-WindowsEnvironmentVariables
+Update-EnvironmentVariables
 ```
 
 #### WSL

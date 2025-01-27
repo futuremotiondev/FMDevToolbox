@@ -1,4 +1,4 @@
-﻿function ConvertFrom-HashtableToPSObject {
+﻿function Convert-HashtableToPSObject {
     param(
         [Parameter(Mandatory, ValueFromPipeline)]
         [System.Collections.IDictionary] $HashTable
@@ -9,7 +9,7 @@
             if ($Entry.Value -is [System.Collections.IDictionary]) {
                 # Nested dictionary? Recurse.
                 # NOTE: Casting to [object] prevents problems with *numeric* hashtable keys.
-                $OrderedHashtable[[object] $Entry.Key] = ConvertFrom-HashtableToPSObject -HashTable $Entry.Value
+                $OrderedHashtable[[object] $Entry.Key] = Convert-HashtableToPSObject -HashTable $Entry.Value
             } else {
                 # Copy value as-is.
                 $OrderedHashtable[[object] $Entry.Key] = $Entry.Value

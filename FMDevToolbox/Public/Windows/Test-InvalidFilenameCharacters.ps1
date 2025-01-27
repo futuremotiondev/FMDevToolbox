@@ -3,7 +3,7 @@
     Checks for illegal characters in a file path or file name.
 
 .DESCRIPTION
-    The Confirm-PathIsIllegal function determines if a given path contains
+    The Test-InvalidFilenameCharacters function determines if a given path contains
     any illegal characters that are not allowed in Windows file paths or file names.
     It returns a boolean value indicating the presence of such characters.
 
@@ -15,14 +15,14 @@
     Returns $true if the path or file name contains illegal characters; otherwise, returns $false.
 
 .EXAMPLE
-    'C:\Invalid|Path\example.txt' | Confirm-PathIsIllegal
+    'C:\Invalid|Path\example.txt' | Test-InvalidFilenameCharacters
 
     Description:
     This example checks the path 'C:\Invalid|Path\example.txt' for illegal characters.
     It will return $true because the pipe character '|' is not allowed in paths.
 
 .EXAMPLE
-    Confirm-PathIsIllegal -Path 'D:\ValidPath\validfile.txt'
+    Test-InvalidFilenameCharacters -Path 'D:\ValidPath\validfile.txt'
 
     Description:
     This example checks the path 'D:\ValidPath\validfile.txt' for illegal characters.
@@ -30,7 +30,7 @@
 
 .EXAMPLE
     $paths = @('E:\Another|Invalid:Path\file.doc', 'F:\CorrectPath\correctfile.doc')
-    $paths | Confirm-PathIsIllegal
+    $paths | Test-InvalidFilenameCharacters
 
     Description:
     This example checks multiple paths stored in the $paths variable for illegal characters.
@@ -42,7 +42,7 @@
     Website: https://github.com/futuremotiondev
     Date: 11-06-2024
 #>
-function Confirm-PathIsIllegal {
+function Test-InvalidFilenameCharacters {
     [CmdletBinding()]
     [OutputType([bool])]
     param (

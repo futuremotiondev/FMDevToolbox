@@ -1,4 +1,4 @@
-﻿function Update-WindowsEnvironmentVariables {
+﻿function Update-EnvironmentVariables {
 
     Write-SpectreHost "[#FFFFFF]Refreshing environment variables...[/]"
 

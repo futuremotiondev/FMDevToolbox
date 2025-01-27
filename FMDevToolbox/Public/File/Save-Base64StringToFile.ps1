@@ -62,7 +62,7 @@ function Save-Base64StringToFile {
 
         try {
             [IO.File]::WriteAllBytes($FileSaveDestination, $ContentBytes)
-            Request-WindowsExplorerRefresh
+            Request-ExplorerRefreshV3
         } catch {
             throw "Failed to write content to file '$FileSaveDestination': $_"
         }

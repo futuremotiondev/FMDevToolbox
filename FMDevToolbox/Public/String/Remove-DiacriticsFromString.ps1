@@ -1,4 +1,4 @@
-function Format-StringReplaceDiacritics {
+function Remove-DiacriticsFromString {
     [CmdletBinding()]
     param (
         [parameter(Mandatory,Position=0,ValueFromPipeline,ValueFromPipelineByPropertyName)]
