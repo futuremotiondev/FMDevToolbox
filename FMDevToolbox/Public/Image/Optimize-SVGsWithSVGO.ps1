@@ -133,29 +133,67 @@ function Optimize-SVGsWithSVGO {
             }
         }
 
-        if($svgFileList){
-            foreach ($svg in $svgFileList) {
-                if($PlaceInSubfolder){
-                    $newSubfolderPath = [System.IO.Path]::Combine($svg.Directory, $SubfolderName)
-                    if($foldersToDirectlyProcess -notcontains $newSubfolderPath){
+        # Helper function to generate a unique subfolder path
+        function Get-UniqueSubfolderPath {
+            param (
+                [string]$baseDirectory,
+                [string]$subfolderName
+            )
+
+            $uniquePath = [System.IO.Path]::Combine($baseDirectory, $subfolderName)
+            $counter = 2
+
+            while (Test-Path -Path $uniquePath) {
+                $uniquePath = [System.IO.Path]::Combine($baseDirectory, "$subfolderName {0:D2}" -f $counter)
+                $counter++
+            }
+
+            return $uniquePath
+        }
+
+        if ($svgFileList) {
+            # Group SVGs by their base directory
+            $groupedByDirectory = $svgFileList | Group-Object { [System.IO.Path]::GetDirectoryName($_) }
+
+            foreach ($group in $groupedByDirectory) {
+                $baseDirectory = $group.Name
+                $svgFiles = $group.Group
+
+                if ($PlaceInSubfolder) {
+                    # Check if a subfolder path is already recorded for this base directory
+                    $existingSubfolderPath = $foldersToDirectlyProcess | Where-Object { $_ -like "$baseDirectory\$SubfolderName*" } | Select-Object -First 1
+
+                    if (-not $existingSubfolderPath) {
+                        # Use the helper function to get a unique subfolder path
+                        $newSubfolderPath = Get-UniqueSubfolderPath -baseDirectory $baseDirectory -subfolderName $SubfolderName
+
                         New-Item -Path $newSubfolderPath -ItemType Directory -Force | Out-Null
                         $null = $foldersToDirectlyProcess.Add($newSubfolderPath)
                     }
-                    try {
-                        $newSvgPath = [System.IO.Path]::Combine($newSubfolderPath, $svg.Name)
-                        [IO.File]::Copy($svg.FullName, $newSvgPath, $true)
+                    else {
+                        $newSubfolderPath = $existingSubfolderPath
                     }
-                    catch {
-                        Write-Error "Error copying '$($svg.FullName)' to '$newSubfolderPath' Details: $_"
-                        continue
+
+                    foreach ($svg in $svgFiles) {
+                        try {
+                            $svgFullName = [System.IO.Path]::GetFullPath($svg)
+                            $svgName = [System.IO.Path]::GetFileName($svg)
+                            $newSvgPath = [System.IO.Path]::Combine($newSubfolderPath, $svgName)
+                            [IO.File]::Copy($svgFullName, $newSvgPath, $true)
+                        }
+                        catch {
+                            Write-Error "Error copying '$svg' to '$newSubfolderPath' Details: $_"
+                            continue
+                        }
                     }
                 }
                 else {
-                    $null = $filesToDirectlyProcess.Add($svg.FullName)
+                    foreach ($svg in $svgFiles) {
+                        $null = $filesToDirectlyProcess.Add([System.IO.Path]::GetFullPath($svg))
+                    }
                 }
             }
         }
-
 
         if($Parallel){
             if($foldersToDirectlyProcess.Count -gt 0){
@@ -193,6 +231,6 @@ function Optimize-SVGsWithSVGO {
             }
         }
 
-        Write-SpectreHost "[#3FEE9C][[SUCCESS]][/] All files have been processed with SVGO."
+        Write-SpectreHost "`n[#3FEE9C][[SUCCESS]][/] All files have been processed with SVGO."
     }
 }
