@@ -17,7 +17,6 @@
             $Directory = [System.IO.Path]::GetDirectoryName($String)
             $FileName = [System.IO.Path]::GetFileNameWithoutExtension($String)
             $Extension = [System.IO.Path]::GetExtension($String)
-
             $NewFileName = "$FileName$SuffixSeparator$Suffix$Extension"
 
             if ($Directory) {

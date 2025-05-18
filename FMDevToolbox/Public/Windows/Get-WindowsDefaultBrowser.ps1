@@ -1,21 +1,14 @@
-# REFACTOR: Linux support, code quality, pipeline
 function Get-WindowsDefaultBrowser {
-    [CmdletBinding()]
-    param ()
-
     try {
         $BrowserRegPath     = 'HKCU:\SOFTWARE\Microsoft\Windows\Shell\Associations\UrlAssociations\http\UserChoice'
         $DBrowserProgID     = (Get-Item $BrowserRegPath | Get-ItemProperty).ProgId
-        $Command            = Get-ItemProperty "Registry::HKEY_CLASSES_ROOT\$DBrowserProgID\shell\open\command" -ErrorAction Stop
-        $DBrowserCommand    = $Command.'(default)'
-        $DBrowserImagePath  = ([regex]::Match($DBrowserCommand,'\".+?\"')).Value
-        $DBrowserImagePath  = $DBrowserImagePath.Trim('"')
+        $DBrowserCommand    = (Get-ItemProperty "Registry::HKEY_CLASSES_ROOT\$DBrowserProgID\shell\open\command").'(default)'
+        $DBrowserImagePath  = (([regex]::Match($DBrowserCommand,'\".+?\"')).Value).Trim('"')
         $DBrowserImage      = [System.IO.Path]::GetFileName($DBrowserImagePath)
-
-    } catch {
-        throw "Couldn't determine default browser."
     }
-
+    catch {
+        throw "Couldn't determine default browser. $_"
+    }
     switch ($DBrowserProgID) {
         'IE.HTTP' {
             $DBrowserName = "Internet Explorer"
@@ -42,7 +35,6 @@ function Get-WindowsDefaultBrowser {
             $DBrowserName = "Unknown Browser"
         }
     }
-
     [PSCustomObject]@{
         Name           = $DBrowserName
         ProgID	       = $DBrowserProgID

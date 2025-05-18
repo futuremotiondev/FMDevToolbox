@@ -73,20 +73,8 @@
     Website: https://github.com/futuremotiondev
     Date: 01-03-2025
     #>
-    [CmdletBinding(SupportsShouldProcess=$true, DefaultParameterSetName='Path')]
-    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingCmdletAliases', '')]
+    [CmdletBinding(SupportsShouldProcess=$true)]
     param (
-        [Parameter(
-            Mandatory,
-            Position = 0,
-            ValueFromPipelineByPropertyName,
-            ParameterSetName = "Path",
-            HelpMessage="Path to one or more locations."
-        )]
-        [SupportsWildcards()]
-        [ValidateNotNullOrEmpty()]
-        [String[]] $Path,
-
         [Parameter(
             Mandatory,
             Position = 0,

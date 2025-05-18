@@ -1,17 +1,16 @@
-﻿[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseApprovedVerbs', '')]
-[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingCmdletAliases', '')]
-[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', '')]
-param()
+﻿#Requires -modules PwshSpectreConsole
 
-$script:ModuleRoot = $PSScriptRoot
-$script:ModuleName = $script:ModuleRoot.Split('\')[-1]
-$script:ModulePublic = "$script:ModuleRoot\Public"
-$script:ModuleLib = "$script:ModuleRoot\Lib"
+$script:ModuleRoot     = $PSScriptRoot
+$script:ModuleName     = $script:ModuleRoot.Split('\')[-1]
+$script:ModulePublic   = "$script:ModuleRoot\Public"
+$script:ModuleLib      = "$script:ModuleRoot\Lib"
 $script:ModuleManifest = "$script:ModuleRoot\$script:ModuleName.psd1"
-$script:RepoRoot = (Resolve-Path -Path "$PSScriptRoot/..").Path
-$script:DocsRoot = (Resolve-Path -Path "$script:RepoRoot/$script:ModuleName.Docs").Path
-$script:TestsRoot = (Resolve-Path -Path "$script:RepoRoot/$script:ModuleName.Tests").Path
-$script:ChangelogPath = "$script:RepoRoot/CHANGELOG.md"
+$script:RepoRoot       = (Resolve-Path -Path "$PSScriptRoot/..").Path
+$script:DocsRoot       = (Resolve-Path -Path "$script:RepoRoot/$script:ModuleName.Docs").Path
+$script:TestsRoot      = (Resolve-Path -Path "$script:RepoRoot/$script:ModuleName.Tests").Path
+$script:ChangelogPath  = "$script:RepoRoot/CHANGELOG.md"
+$script:ReadmePath     = "$script:RepoRoot/README.md"
+$script:LicensePath    = "$script:RepoRoot/LICENSE.md"
 
 function Install-ModuleDependencies {
     [CmdletBinding()]
@@ -149,179 +148,79 @@ function Install-ModuleDependencies {
 function Update-ModuleFunctionsAndAliases {
     [CmdletBinding()]
     param(
-        [Switch] $UpdateMarkdownList,
-        [Switch] $ClearListBeforeUpdate
+        [Switch] $Silent
     )
-    $Manifest = Import-PowerShellDataFile -Path $script:ModuleManifest
-    $ExistingFunctions = $Manifest.FunctionsToExport -as [System.Collections.Generic.List[String]]
-    $ExistingAliases = $Manifest.AliasesToExport -as [System.Collections.Generic.List[String]]
 
-    # Retrieve module functions
-    $RetrievedAliases = [System.Collections.Generic.List[String]]@()
-    $RetrievedFunctions = [System.Collections.Generic.List[String]]@()
-    Get-ChildItem -Path "$ModuleRoot\Public\*.ps1" -Recurse | % {
-        $RetrievedFunctions.Add($_.BaseName) | Out-Null
-        $Alias = Get-Alias -Definition $_.BaseName -ErrorAction SilentlyContinue
-        if ($Alias) { $RetrievedAliases.Add($Alias.Name) | Out-Null }
-    }
-    # Determine new functions and aliases
-    $NewFunctions = $RetrievedFunctions | % { if( $_ -notin $ExistingFunctions ){ $_ } }
-    $NewAliases = $RetrievedAliases | % { if( $_ -notin $ExistingAliases ){ $_ } }
-    # Create a hashtable for members to export
-    $Export = @{}
-    if ($RetrievedFunctions.Count -gt 0) {
-        $Export['Functions'] = $RetrievedFunctions -as [Array] | Sort-Object
-    }
-    if ($RetrievedAliases.Count -gt 0) {
-        $Export['Aliases'] = $RetrievedAliases -as [Array] | Sort-Object
-    }
-    if ($NewFunctions.Count -gt 0) {
-        $Export['NewFunctions'] = $NewFunctions | Sort-Object
-    }
-    if ($NewAliases.Count -gt 0) {
-        $Export['NewAliases'] = $NewAliases | Sort-Object
-    }
-    return [PSCustomObject] $Export
-}
-function Save-FunctionMarkdownList {
-    [CmdletBinding()]
-    param (
-        [Parameter(Mandatory)]
-        [String] $Version
-    )
-    $OutputFile = "$script:DocsRoot\Generated\FunctionList.md"
-    Remove-Item -LiteralPath $OutputFile -Force -ErrorAction SilentlyContinue | Out-Null
-    New-Item -Path $OutputFile -ItemType File -Force | Out-Null
+    [PSCustomObject[]] $PublicAliases = @()
+    [PSCustomObject[]] $PublicFunctions = @()
+    [PSCustomObject[]] $PrivateAliases = @()
+    [PSCustomObject[]] $PrivateFunctions = @()
 
-    $Header = "# $script:ModuleName ($Version) Complete Function List`r`n`r`n"
-    $Header = $Header -replace "\s{2,}", " "
-    Add-Content -Path $OutputFile -Value $Header
+    # Helper function to process files and collect functions and aliases
+    $AccumulateMembers = {
+        [CmdletBinding()]
+        param (
+            [Parameter(Mandatory,Position=0)]
+            [string] $Src,
+            [ref] $Functions,
+            [ref] $Aliases
+        )
+        Get-ChildItem -Path $Src -Recurse -Force -EA 0 | % {
 
-    $Directories = Get-ChildItem -Path "$script:ModulePublic\*" -Directory | % { $_.FullName }
-    foreach ($Dir in $Directories) {
-        $Dirname = [System.IO.Path]::GetFileName($Dir)
-        Add-Content -Path $OutputFile -Value "#### $Dirname"
-        Add-Content -Path $OutputFile -Value "`n``````"
-
-        Get-ChildItem -Path "$Dir\*.ps1" -Recurse | % { $_.BaseName } |
-            Sort-Object | % { Add-Content -Path $OutputFile -Value $_ }
-
-        Add-Content -Path $OutputFile -Value "```````n"
-    }
-}
-function Step-Version {
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory,Position=0,ValueFromPipeline)]
-        [Version] $Version,
-        [Parameter(Position=1)]
-        [ValidateSet("Major", "Minor", "Build")]
-        [String] $By = "Build"
-    )
-    process {
-        if(-not[String]::IsNullOrEmpty($Version)){
-            $major = $Version.Major; $minor = $Version.Minor; $build = $Version.Build;
-            switch ($By) {
-                "Major" { $major++; $minor = 0; $build = 0; break; }
-                "Minor" { $minor++; $build = 0; break; }
-                default { $build++; break; }
+            $obj = [PSCustomObject]@{
+                BaseName = $_.BaseName
+                FullPath = $_.FullName
+                Category = $_.DirectoryName
             }
-            return [Version]::new($major, $minor, $build).ToString()
+
+            $Functions.Value += $obj
+            $Alias = Get-Alias -Definition $_.BaseName -EA 0
+            $Alias.Name
+            $Alias.ResolvedCommand
+
+            if ($Alias) { $Aliases.Value += $Alias.Name }
         }
     }
-}
 
-function Step-Prerelease {
-    param(
-        [Parameter(Mandatory,Position=0,ValueFromPipeline)]
-        [ValidateNotNullOrEmpty()]
-        [String] $Version,
-        [Switch] $Reset,
-        [Switch] $Remove
-    )
+    & $AccumulateMembers "$ModuleRoot\Public\*.ps1" -Functions ([ref]$PublicFunctions) -Aliases ([ref]$PublicAliases)
+    $PublicFunctions = $PublicFunctions | Sort-Object
+    $PublicAliases   = $PublicAliases   | Sort-Object
+    & $AccumulateMembers "$ModuleRoot\Private\*.ps1" -Functions ([ref]$PrivateFunctions) -Aliases ([ref]$PrivateAliases)
+    $PrivateFunctions = $PrivateFunctions | Sort-Object
+    $PrivateAliases   = $PrivateAliases   | Sort-Object
 
-    process {
-        if($Reset){ return "prerelease-001" }
-        if($Remove) { return $null }
-        $reMatch = ([regex]'^(?<tag>prerelease\-)(?<version>\d+)$').Match($Version)
-        if($reMatch.Success){
-            $Prefix = $reMatch.Groups['tag'].Value
-            $Version = $reMatch.Groups['version'].Value
-            $VersionLength = $Version.Length
-            $VersionInt = $Version -as [Int32]
-            $NewString = "{0}{1:D$VersionLength}" -f $Prefix, ($VersionInt + 1)
-            return $NewString
-        }
-        else {
-            Write-Error "Unable to step prerelease. ($Version)"
-            return $Version
-        }
+    if(-not$Silent){
+        foreach ($pf in $PublicFunctions)   { Write-SpectreHost "[#697582]Public function added:   [/][#FFFFFF]$pf[/]" }
+        foreach ($pa in $PublicAliases)     { Write-SpectreHost "[#697582]Public alias added:      [/][#FFFFFF]$pa[/]" }
+        foreach ($prf in $PrivateFunctions) { Write-SpectreHost "[#697582]Private function added:  [/][#FFFFFF]$prf[/]" }
+        foreach ($pra in $PrivateAliases)   { Write-SpectreHost "[#697582]Private alias added:     [/][#FFFFFF]$pra[/]" }
     }
-}
 
+    $Export = [PSCustomObject]@{
+        AllFunctions     = $PublicFunctions + $PrivateFunctions
+        AllAliases       = $PublicAliases + $PrivateAliases
+        PublicFunctions  = $PublicFunctions
+        PrivateFunctions = $PrivateFunctions
+        PublicAliases    = $PublicAliases
+        PrivateAliases   = $PrivateAliases
+    }
+    $Export
+}
 function Update-FMModule {
     [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
     param (
-        [Switch] $UpdateFunctionsAndAliases,
-        [Switch] $StepPrerelease,
         [String] $SetPrerelease,
-        [ValidateSet("None", "Major", "Minor", "Build")]
-        [String] $StepVersion = "None",
         [Switch] $RemovePrerelease,
+        [Version] $SetVersion,
         [String] $ProjectURI  = "https://github.com/futuremotiondev/$script:ModuleName",
         [String] $LicenseURI  = "https://github.com/futuremotiondev/$script:ModuleName/blob/main/LICENSE",
         [String] $IconURI     = "https://github.com/futuremotiondev/$script:ModuleName/blob/main/Assets/Images/ModuleIcon.png",
         [String] $HelpInfoURI = "https://github.com/futuremotiondev/$script:ModuleName/blob/main/README.md",
-        [Hashtable[]] $ChangelogData,
-        [Switch] $RebuildAssemblies
+        [Switch] $RebuildAssemblies,
+        [Switch] $UpdateFunctionsAndAliases,
+        [Switch] $GenerateFunctionListInDocs,
+        [Switch] $Silent
     )
-
-    $Manifest = Import-PowerShellDataFile -Path $script:ModuleManifest
-    $ExistingVersion = $Manifest.ModuleVersion
-    $ExistingPrerelease = $Manifest.PrivateData['PSData'].Prerelease
-
-    if($UpdateFunctionsAndAliases){
-
-        $ExportedMembers = Update-ModuleFunctionsAndAliases
-        $FunctionsToExport = $ExportedMembers.Functions
-        $AliasesToExport = $ExportedMembers.Aliases
-        $NewFunctions = $ExportedMembers.Functions
-        $NewAliases = $ExportedMembers.Aliases
-    }
-
-
-    if($ExistingPrerelease){
-        $PrereleaseTag = $ExistingPrerelease
-    }
-    if($StepVersion -ne "None"){
-        $ModuleVersion = Step-Version -Version $ExistingVersion -By $StepVersion
-        $PrereleaseTag = '%%%REMOVE%%%%'
-    }
-    if($StepPrerelease){
-        $PrereleaseTag = Step-Prerelease -Version $ExistingPrerelease
-    }
-    if($RemovePrerelease){
-        $PrereleaseTag = '%%%REMOVE%%%%'
-    }
-    if($SetPrerelease){
-        $PrereleaseTag = $SetPrerelease
-    }
-
-    # Update Module Manifest
-    $UpdateSplat = @{
-        Path = $script:ModuleManifest
-        FunctionsToExport = $FunctionsToExport
-        AliasesToExport = $AliasesToExport
-        ModuleVersion = $ModuleVersion
-        ProjectUri = $ProjectURI
-        LicenseUri = $LicenseURI
-        IconUri = $IconURI
-        HelpInfoUri = $HelpInfoURI
-    }
-
-    if(-not[String]::IsNullOrWhiteSpace($PrereleaseTag)){
-        $UpdateSplat['Prerelease'] = $PrereleaseTag
-    }
 
     # Rebuild Assemblies if required
     if($RebuildAssemblies){
@@ -336,11 +235,63 @@ function Update-FMModule {
             'Microsoft.Toolkit.Uwp.Notifications' = @{ Version = '7.1.3'; Framework = 'net5.0-windows10.0.17763'; DLLName = $null; }
             'Microsoft.Windows.SDK.NET.Ref' = @{ Version = '10.0.26100.34'; Framework = 'net6.0'; DLLName = 'Microsoft.Windows.SDK.NET.dll'; }
             'Ookii.Dialogs.WinForms' = @{ Version = '4.0.0'; Framework = 'net6.0-windows7.0'; DLLName = $null; }
+            'SixLabors.ImageSharp' = @{ Version = '3.1.6'; Framework = 'net6.0'; DLLName = $null; }
         }
         $RequiredAssemblies = Install-ModuleDependencies -NuGet $NuGetPackages -Internal $InternalPackages | Out-Null
         $UpdateSplat['RequiredAssemblies'] = $RequiredAssemblies
     }
 
+    $Manifest = Import-PowerShellDataFile -Path $script:ModuleManifest
+    [version] $ExistingVersion = $Manifest.ModuleVersion
+    [string] $ExistingPrerelease = $Manifest.PrivateData['PSData'].Prerelease
+
+    if($SetPrerelease -and $RemovePrerelease){
+        Write-Error "-SetPrerelease and -RemovePrerelease cannot be used together."
+        return
+    }
+
+    # Handle Prerelease value
+    $RemoveKeyword = '%%%REMOVE%%%%'
+    if($SetPrerelease) { $PrereleaseTag = $SetPrerelease }
+    elseif($ExistingPrerelease) { $PrereleaseTag = $ExistingPrerelease }
+    elseif($RemovePrerelease){ $PrereleaseTag = $RemoveKeyword }
+    if([String]::IsNullOrWhiteSpace($PrereleaseTag)){ $PrereleaseTag = $RemoveKeyword }
+
+    # Handle Module Version
+    if($SetVersion){ $ModuleVersion = $SetVersion.ToString() }
+    elseif($ExistingVersion){ $ModuleVersion = $ExistingVersion.ToString() }
+    else{ $ModuleVersion = '1.0.0' }
+
+    if($UpdateFunctionsAndAliases){
+        if($Silent){
+            $ExportedMembers = Update-ModuleFunctionsAndAliases -Silent
+        }
+        else {
+            $ExportedMembers = Update-ModuleFunctionsAndAliases
+        }
+        $FunctionsToExport = $ExportedMembers.AllFunctions
+        $AliasesToExport = $ExportedMembers.AllAliases
+    }
+
+    if($GenerateFunctionListInDocs){
+        $docsFolder = $script:DocsRoot
+        $publicFunctionList = $ExportedMembers.PublicFunctions
+        Write-Host -f Green "`$publicFunctionList:" $publicFunctionList
+        Write-Host -f Green "`$publicFunctionList.GetType():" $publicFunctionList.GetType()
+        Write-Host -f Green "`$publicFunctionList.GetType().baseType:" $publicFunctionList.GetType().baseType
+    }
+
+    $UpdateSplat = @{
+        Path              = $script:ModuleManifest
+        FunctionsToExport = $FunctionsToExport
+        AliasesToExport   = $AliasesToExport
+        ModuleVersion     = $ModuleVersion
+        ProjectUri        = $ProjectURI
+        LicenseUri        = $LicenseURI
+        IconUri           = $IconURI
+        HelpInfoUri       = $HelpInfoURI
+        Prerelease        = $PrereleaseTag
+    }
 
     Update-PSModuleManifest @UpdateSplat -Verbose | Out-Null
 
@@ -348,14 +299,13 @@ function Update-FMModule {
         $lines = Get-Content -Path $script:ModuleManifest -Raw
         $rePrerelease = "(?m)^(\s*)(Prerelease\s*=\s*)'.*'"
         $updatedLines = $lines -replace $rePrerelease, '${1}# ${2}'''''
-        # Set-Content -LiteralPath $script:ModuleManifest
         $Encoding = New-Object System.Text.UTF8Encoding $False
         [IO.File]::WriteAllText($script:ModuleManifest, $updatedLines, $Encoding)
     }
 
     Test-ModuleManifest -Path $script:ModuleManifest
-    Save-FunctionMarkdownList -Version "$ModuleVersion $PrereleaseTag"
 }
 
-Update-FMModule -UpdateFunctionsAndAliases -SetPrerelease "prerelease-006"
+
+Update-FMModule -UpdateFunctionsAndAliases -GenerateFunctionListInDocs
 

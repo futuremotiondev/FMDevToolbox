@@ -1,6 +1,6 @@
 ﻿using module "..\..\Private\Completions\FMCompleters.psm1"
 
-function Get-NVMNodeNPMVersions {
+function Show-NVMNodeNPMVersions {
 
     [CmdletBinding()]
     param (

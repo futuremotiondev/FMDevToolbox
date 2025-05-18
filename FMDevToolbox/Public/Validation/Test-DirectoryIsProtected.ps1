@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Determines if a directory is protected by the operating system or user environment.
 

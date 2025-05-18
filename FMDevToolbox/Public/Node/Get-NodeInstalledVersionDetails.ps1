@@ -106,6 +106,7 @@ function Get-NodeInstalledVersionDetails {
                 Version = $v
                 Type = 'NVMForWindows'
                 Active = $activeVersion
+                Latest = $false
                 InstallDir = "$env:NVM_HOME\v$v"
             }
         } | Sort-Object -Property Version -Descending
@@ -117,9 +118,13 @@ function Get-NodeInstalledVersionDetails {
             Version = $v
             Type = 'NormalInstall'
             Active = $true
+            Latest = $true
             InstallDir = Split-Path -LiteralPath $nodeCmd.Path
         }
     }
+
+    $versionList[0].Latest = $true
+
     if($PSBoundParameters['Latest']){
         $versionList = $versionList | Select-Object -First 1
     }
@@ -145,18 +150,28 @@ function Get-NodeInstalledVersionDetails {
         }
     }
 
+
+
     $versionList | % {
 
-        $nodeExe = Join-Path -Path $_.InstallDir -ChildPath 'node.exe'
+        $vObj = $_
+        $curVersion = $vObj.Version
+        $curType = $vObj.Type
+        $curIsActive = $vObj.Active
+        $curIsLatest = $vObj.Latest
+        $curInstallDir = $vObj.InstallDir
+
+        $nodeExe = Join-Path -Path $curInstallDir -ChildPath 'node.exe'
         $nodeCmd = Get-Command $nodeExe -CommandType Application
         $archParams = "-p", "process.arch"
         $architecture = (& $nodeCmd $archParams).Trim()
 
         $output = [PSCustomObject]@{
-            Version          = $_.Version
-            Type             = $_.Type
-            Active           = $_.Active
-            InstallDirectory = $_.InstallDir
+            Version          = $curVersion
+            Type             = $curType
+            Active           = $curIsActive
+            Latest           = $curIsLatest
+            InstallDirectory = $curInstallDir
             NodeBinary       = $nodeExe
             Architecture     = $architecture
         }
@@ -164,7 +179,7 @@ function Get-NodeInstalledVersionDetails {
         #  NPM Version and Update Check  //////////////////////////////////////////////////////////#
 
         if($PSBoundParameters['ShowNPMDetails']){
-            $npmJson = [System.IO.Path]::Combine(($_.InstallDir), 'node_modules', 'npm', 'package.json')
+            $npmJson = [System.IO.Path]::Combine(($curInstallDir), 'node_modules', 'npm', 'package.json')
             $npmVer  = [version] ((Get-Content -LiteralPath $npmJson -Raw | ConvertFrom-Json).version).Trim()
             $output | Add-Member -NotePropertyName 'NPMVersion' -NotePropertyValue $npmVer
         }
@@ -183,7 +198,7 @@ function Get-NodeInstalledVersionDetails {
 
         if($PSBoundParameters['EnumerateGlobalModules']){
 
-            $nodeModules = [System.IO.Path]::Combine(($_.InstallDir), 'node_modules')
+            $nodeModules = [System.IO.Path]::Combine(($curInstallDir), 'node_modules')
             $moduleDirs = Get-ChildItem $nodeModules -Directory -Force
 
             $globalModulesAccumulator = foreach ($dir in $moduleDirs) {

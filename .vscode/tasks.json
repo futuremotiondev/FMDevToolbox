@@ -17,6 +17,7 @@
 // ${execPath} - path to the running VS Code executable
 // ${defaultBuildTask} - name of the default build task
 // ${pathSeparator} - character used by the operating system to separate components in file paths
+
 {
     "version": "2.0.0",
     "windows": {
@@ -25,8 +26,6 @@
                 "executable": "pwsh.exe",
                 "args": [
                     "-NoProfile",
-                    "-ExecutionPolicy",
-                    "Bypass",
                     "-Command"
                 ]
             }
@@ -34,41 +33,20 @@
     },
     "tasks": [
         {
-            "label": "FMDevToolbox Build",
+            "label": "Build FMDevToolbox",
             "type": "shell",
-            "command": " & '${workspaceFolder}/${workspaceFolderBasename}/Build.ps1'",
+            "command": " & 'D:/Dev/Powershell/FMDevToolbox/FMDevToolbox/Build.ps1'",
             "presentation": {
-                "echo": true,
+                "reveal": "always",
+                "panel": "shared",
                 "showReuseMessage": false,
-                "close": true
+                "close": true,
+                "clear": false
             },
-            "group": "none"
-        },
-        {
-            "label": "Echo vars",
-            "command": "echo",
-            "args": [
-                "User Home:                  ${userHome}",
-                "Workspace Folder:           ${workspaceFolder}",
-                "Workspace Folder Basename:  ${workspaceFolderBasename}",
-                "File:                       ${file}",
-                "File Workspace Folder:      ${fileWorkspaceFolder}",
-                "Relative File:              ${relativeFile}",
-                "Relative File Dirname:      ${relativeFileDirname}",
-                "File Basename:              ${fileBasename}",
-                "File Basename No Extension: ${fileBasenameNoExtension}",
-                "File Extension:             ${fileExtname}",
-                "File Dirname:               ${fileDirname}",
-                "File Dirname Basename:      ${fileDirnameBasename}",
-                "CWD:                        ${cwd}",
-                "Line Number:                ${lineNumber}",
-                "Selected Text:              ${selectedText}",
-                "Exec Path:                  ${execPath}",
-                "Default Build Task:         ${defaultBuildTask}",
-                "Path Separator:             ${pathSeparator}",
-                "Path Separator Alias:       ${/}"
-            ],
-            "type": "shell"
-        },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        }
     ]
 }

@@ -1,99 +1,151 @@
-﻿<#
-.SYNOPSIS
-Converts a list of plaintext strings into a PowerShell array declaration.
+﻿function Convert-PlaintextListToPowershellArray {
+    <#
+    .SYNOPSIS
+    Converts a plaintext list into a PowerShell array declaration.
 
-.DESCRIPTION
-The `Convert-PlaintextListToPowershellArray` function takes a list of strings and converts it into a
-PowerShell array declaration. It offers options to sort the items, strip quotes, copy the output to the
-clipboard, and save the result to a file.
+    .DESCRIPTION
+    This function takes a list of strings from either the pipeline, clipboard, or
+    direct input and converts it into a PowerShell array declaration. It supports
+    sorting, removing duplicates, stripping quotes, and outputting to a file or
+    clipboard. The function can also suppress console output if desired.
 
-.PARAMETER ListItems
-An array of strings representing the list items to be converted into a PowerShell array.
+    .PARAMETER InputList
+    A list of strings to be converted into a PowerShell array. Accepts pipeline
+    input.
 
-.PARAMETER CopyToClipboard
-A switch parameter that, when specified, copies the resulting array declaration to the clipboard.
+    .PARAMETER ListFromClipboard
+    Indicates that the input list should be taken from the clipboard.
 
-.PARAMETER StripQuotes
-A switch parameter that, when specified, removes quotes from each item in the list before processing.
+    .PARAMETER SortList
+    Specifies how the list should be sorted. Options are 'Ascending', 'Descending',
+    or 'None'. Default is 'Ascending'.
 
-.PARAMETER Sort
-Specifies the order in which to sort the list items. Acceptable values are 'Ascending' or 'Descending'.
-The default is 'Ascending'.
+    .PARAMETER ArrayName
+    The name of the PowerShell array to be created. Default is 'NewArray'.
 
-.PARAMETER ArrayName
-Specifies the name of the PowerShell array variable. Must match the pattern of word characters only.
-Defaults to 'NewArray'.
+    .PARAMETER OutputFilepath
+    An optional file path where the resulting PowerShell array declaration should be saved.
 
-.PARAMETER OutputFile
-Specifies the path to a file where the resulting array declaration will be saved. If the file already
-exists, a unique name will be generated.
+    .PARAMETER CopyToClipboard
+    Copies the resulting PowerShell array declaration to the clipboard.
 
-.PARAMETER NoOutput
-A switch parameter that, when specified, suppresses the output of the array declaration to the console.
+    .PARAMETER StripQuotes
+    Removes any leading or trailing quotes from each item in the list.
 
-.EXAMPLE
-Convert-PlaintextListToPowershellArray -ListItems "apple", "banana", "cherry" -Sort Descending -ArrayName FruitArray
+    .PARAMETER RemoveDuplicates
+    Removes duplicate entries from the list before processing.
 
-This example converts a list of fruits into a PowerShell array named `FruitArray`, sorted in descending order.
+    .PARAMETER SuppressOutput
+    Suppresses the output of the PowerShell array declaration to the console.
 
-.EXAMPLE
-Convert-PlaintextListToPowershellArray -ListItems "file1.txt", "file2.txt", "file3.txt" -CopyToClipboard -StripQuotes
+    .EXAMPLE
+    # **Example 1**
+    # This example demonstrates how to convert a list of strings from the pipeline into a PowerShell array.
+    "Item1", "Item2", "Item3" | Convert-PlaintextListToPowershellArray -ArrayName "MyArray"
 
-This example converts a list of filenames into a PowerShell array, strips any quotes, and copies the result to the clipboard.
+    .EXAMPLE
+    # **Example 2**
+    # This example demonstrates how to convert a list from the clipboard, sort it in descending order, and copy the result back to the clipboard.
+    Convert-PlaintextListToPowershellArray -ListFromClipboard -SortList "Descending" -CopyToClipboard
 
-.EXAMPLE
-Convert-PlaintextListToPowershellArray -ListItems "dog", "cat", "bird" -OutputFile "C:\temp\AnimalArray.ps1" -NoOutput
+    .EXAMPLE
+    # **Example 3**
+    # This example demonstrates how to remove duplicates and strip quotes from an input list, then save the result to a file.
+    $list = @('"Item1"', '"Item2"', '"Item1"')
+    Convert-PlaintextListToPowershellArray -InputList $list -RemoveDuplicates -StripQuotes -OutputFilepath "C:\output.txt"
 
-This example converts a list of animals into a PowerShell array and saves it to a file at `C:\temp\AnimalArray.ps1` without displaying the output in the console.
+    .EXAMPLE
+    # **Example 4**
+    # This example demonstrates how to suppress output while converting a list and saving the result to a specified file.
+    Convert-PlaintextListToPowershellArray -InputList @("A", "B", "C") -SuppressOutput -OutputFilepath "C:\array.ps1"
 
-.NOTES
-Author: Futuremotion
-Date: 10-12-2024
-URL: https://github.com/futuremotiondev
-#>
-function Convert-PlaintextListToPowershellArray {
-    [CmdletBinding()]
+    .OUTPUTS
+    System.String. The PowerShell array declaration as a string, unless suppressed.
+
+    .NOTES
+    Author: Futuremotion
+    Website: https://github.com/futuremotiondev
+    Date: 05-13-2025
+    #>
+    [CmdletBinding(DefaultParameterSetName = "InputList")]
+    [OutputType([System.String])]
     param(
-        [Parameter(Position=0,ValueFromPipeline,ValueFromPipelineByPropertyName)]
-        [string[]] $ListItems,
-        [Switch] $GetListItemsFromClipboard,
-        [Switch] $CopyToClipboard,
-        [Switch] $StripQuotes,
-        [ValidateSet('Ascending','Descending')]
-        [String] $Sort = 'Ascending',
+        [Parameter(
+            Position=0,
+            ParameterSetName="InputList",
+            ValueFromPipeline,
+            ValueFromPipelineByPropertyName
+        )]
+        [string[]] $InputList,
+
+        [Parameter(
+            Position=0,
+            ParameterSetName="Clipboard",
+            ValueFromPipeline,
+            ValueFromPipelineByPropertyName
+        )]
+        [Switch] $ListFromClipboard,
+
+        [Parameter(ValueFromPipelineByPropertyName)]
+        [ValidateSet('Ascending','Descending','None')]
+        [String] $SortList = 'None',
+
+        [Parameter(ValueFromPipelineByPropertyName)]
         [ValidatePattern('^\w+$')]
         [String] $ArrayName = 'NewArray',
 
-        [ValidateNotNullOrWhitespace()]
-        [ValidateNotNullOrEmpty()]
-        [String] $OutputFile,
+        [Parameter(ValueFromPipelineByPropertyName)]
+        [ValidateScript({$_ -notmatch '[\?\*]'},
+            ErrorMessage = "Wildcard characters *, ? are not acceptable.")]
+        [String[]] $OutputFilepath,
 
-        [Switch] $NoOutput,
-        [Switch] $FilenamesOnly
+        [Parameter(ValueFromPipelineByPropertyName)]
+        [Switch] $CopyToClipboard,
+
+        [Parameter(ValueFromPipelineByPropertyName)]
+        [Switch] $StripQuotes,
+
+        [Parameter(ValueFromPipelineByPropertyName)]
+        [Switch] $RemoveDuplicates,
+
+        [Parameter(ValueFromPipelineByPropertyName)]
+        [Switch] $SuppressOutput
     )
 
-    if($PSBoundParameters.ContainsKey('GetListItemsFromClipboard')){
-        $ListItems = Get-Clipboard
+    begin {}
+    process {
+        [string[]] $outputList = if ($PSCmdlet.ParameterSetName -eq 'Clipboard') {
+            $clipboardArray = Get-Clipboard
+            if (-not $clipboardArray) {
+                Write-Error "Clipboard is empty."
+                return
+            }
+            $clipboardArray
+        } else {
+            $InputList
+        }
+
+        if ($StripQuotes) { $outputList = $outputList.Trim('"\''') }
+        if ($RemoveDuplicates) { $outputList = $outputList | Select-Object -Unique }
+        if ($SortList -ne 'None') {
+            $outputList = $outputList | Sort-Object -Descending:($SortList -eq 'Descending')
+        }
+
+        [string[]] $outputArr = @( ('${0} = @(' -f $ArrayName) )
+        $outputList | % { $outputArr += '    "{0}"' -f $_ }
+        $outputArr += ')'
+
+        # Make sure that the .NET framework uses the same working dir. as PS.
+        [IO.Directory]::SetCurrentDirectory($PWD.ProviderPath)
+
+        if($CopyToClipboard){ $outputArr | Set-Clipboard }
+        if(-not([String]::IsNullOrWhiteSpace($OutputFilepath))){
+            $finalOutputFile = $PSCmdlet.GetUnresolvedProviderPathFromPSPath($OutputFilepath)
+            $finalOutputFile = Get-UniqueNameIfDuplicate -LiteralPath $finalOutputFile
+            $UTF8_ENC = [System.Text.UTF8Encoding]::new($true)
+            Write-Verbose "Saving output file to '$finalOutputFile'"
+            [System.IO.File]::WriteAllLines($finalOutputFile, $outputArr, $UTF8_ENC)
+        }
+        if(-not$SuppressOutput){ $outputArr }
     }
-    if ($StripQuotes) { $ListItems = $ListItems.Trim('"') }
-    if ($FilenamesOnly) {
-        $ListItems = $ListItems | ForEach-Object { [System.IO.Path]::GetFileNameWithoutExtension($_) }
-    }
-    $SortOutput = @{}
-    if ($Sort -eq 'Descending') { $SortOutput['Descending'] = $true }
-    $Output = @(
-        '${0} = @(' -f $ArrayName
-        $ListItems | Sort-Object @SortOutput | ForEach-Object { '    "{0}"' -f $_ }
-        ')'
-    )
-    if($CopyToClipboard){ $Output | Set-Clipboard }
-    if($OutputFile){
-        $OutputFile = $PSCmdlet.GetUnresolvedProviderPathFromPSPath($OutputFile)
-        $FinalFile = Get-UniqueNameIfDuplicate -LiteralPath $OutputFile
-        [System.IO.File]::WriteAllLines($FinalFile, $Output)
-    }
-    if(!$NoOutput){ $Output }
 }
-
-
-#Convert-PlaintextListToPowershellArray

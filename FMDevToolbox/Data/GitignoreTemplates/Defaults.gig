@@ -1,0 +1,27 @@
+## Futuremotion Default Gitignore Rules
+## (https://www.github.com/futuremotiondev/gitignore-templates)
+
+## Image master source formats
+*.ai
+*.psd
+*.eps
+*.ps
+*.[Aa][Ii]
+*.[Pp][Ss][Dd]
+*.[Ee][Pp][Ss]
+*.[Pp][Ss]
+
+## VSCode code-workspace files
+*.code-workspace
+
+## Generic Temp and Reference Folders
+[Bb]in/
+[Dd]ist/
+[Ii]gnore/
+[Dd]epreciated/
+[Ww]orking/
+[Tt]emp/
+[Oo]bsolete/
+[Bb]ackup/
+[Rr]eference/
+[Rr]ef/

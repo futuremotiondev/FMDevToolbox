@@ -1,5 +1,4 @@
 ﻿function Get-PythonInstallations {
-
     [CmdletBinding()]
     param (
         [Switch] $SuppressFreeThreaded
@@ -9,21 +8,17 @@
         throw "The Ascending and Descending switches cannot be used together."
     }
 
-    $PYLauncherCMD = Get-Command py.exe -CommandType Application
-    if(!$PYLauncherCMD) { throw "Py Launcher (py.exe) is not available in PATH." }
-    $PY1 = (& $PYLauncherCMD -0) -split "\r?\n"
-    $PY2 = (& $PYLauncherCMD -0p) -split "\r?\n"
+    $cmdPy = Get-Command py.exe -CommandType Application -EA 0
+    if(!$cmdPy) { throw "Py Launcher (py.exe) is not available in PATH." }
+    [String[]] $py1= (& $cmdPy -0) -split "\r?\n"
+    [String[]] $py2 = (& $cmdPy -0p) -split "\r?\n"
 
-    for ($idx = 0; $idx -lt $PY1.Count; $idx++) {
+    for ($idx = 0; $idx -lt $py1.Count; $idx++) {
 
-        [String] $PY1VersString = $PY1[$idx]
-        [String] $PY2VersString = $PY2[$idx]
-
-        $VString = [regex]::Escape('-V:')
-        $ShortVersion = ((($PY1VersString -replace $VString, '').Trim()) -replace '[\s\*]+Python\s([\d\.]+)(.*)$', '')
-        $Bitness = $PY1VersString -replace '^(:?.*)(\(.*\))$', '$2' -replace ',[\s]freethreaded\)', ') FT' -replace '^\(', '' -replace '\)$',''
-        $Path = ($PY2VersString -replace '^(:?\s\-V\:)', '') -replace '[\s\*]+', ' ' -replace '(.*) (.*)$', '$2'
-        $PyBinary = [System.IO.Path]::GetFileName($Path)
+        $ShortVersion = ((($py1[$idx] -replace $([regex]::Escape('-V:')), '').Trim()) -replace '[\s\*]+Python\s([\d\.]+)(.*)$', '')
+        $Bitness      = $py1[$idx] -replace '^(:?.*)(\(.*\))$', '$2' -replace ',[\s]freethreaded\)', ') FT' -replace '^\(', '' -replace '\)$', ''
+        $Path         = $py2[$idx] -replace '^(:?\s\-V\:)', '' -replace '[\s\*]+', ' ' -replace '(.*) (.*)$', '$2'
+        $PyBinary     = [System.IO.Path]::GetFileName($Path)
 
         $IsFreeThreaded = $false
         $Params = '--version'
@@ -34,7 +29,6 @@
         if($ShortVersion -match '(\d\.*)t'){
             if($SuppressFreeThreaded){ continue }
             $ShortVersion = $ShortVersion.TrimEnd('t')
-            #$FullVersion = $FullVersion + " FT"
             $Bitness = $Bitness.TrimEnd(' FT') -replace '\)$',''
             $IsFreeThreaded = $true
         }
@@ -42,11 +36,11 @@
         $Bitness = $Bitness -replace '\-bit', ''
 
         [PSCustomObject]@{
-            Python = $VersionString
-            Version = $ShortVersion
-            FullVersion = $FullVersion
-            Arch = $Bitness
-            PythonPath = $Path
+            Python       = $VersionString
+            Version      = $ShortVersion
+            FullVersion  = $FullVersion
+            Arch         = $Bitness
+            PythonPath   = $Path
             FreeThreaded = $IsFreeThreaded
             PythonBinary = $PyBinary
         }

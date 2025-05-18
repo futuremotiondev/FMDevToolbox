@@ -1,9 +1,4 @@
-using namespace System.IO
-using namespace System.Collections.Generic
 function Convert-SVGCropWithInkscape {
-    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseApprovedVerbs', '')]
-    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingCmdletAliases', '')]
-    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', '')]
     [CmdletBinding()]
     param (
         [Parameter(
@@ -31,199 +26,149 @@ function Convert-SVGCropWithInkscape {
         [Alias('PSPath')]
         [ValidateNotNullOrEmpty()]
         [String[]] $LiteralPath,
-        [Switch] $PlaceInSubfolder,
-        [String] $OutputSubfolderName = "Cropped SVGs",
+        [String] $InkscapeInstall = 'C:\Tools\inkscape\bin',
         [Switch] $Overwrite,
-        [Switch] $Recurse,
-        [Int32] $Depth,
-
-        [Switch] $RunSVGOAfterConversion
+        [Switch] $PlaceInSubfolder,
+        [String] $DestSubfolderName = "Cropped",
+        [Switch] $Recurse
     )
 
     begin {
-        if($PlaceInSubfolder -and $Overwrite){
-            Write-Error "-PlaceInSubfolder and -Overwrite switches cannot be used together." -ErrorAction continue
-            return
+
+        # $LogFileName = "InkscapeSVGCrop_$((Get-Date -Format "yyyy-MM-dd_(mm{0}ss{1}fff{2})") -f "m","s","ms").log"
+        # $LogFileRoot = $script:FMUserLogDir
+        # if(-not(Test-Path -LiteralPath $LogFileRoot -PathType Container)){
+        #     New-Item -Path $LogFileRoot -ItemType Directory -Force
+        # }
+        # $LogFilePath = Join-Path $LogFileRoot -ChildPath $LogFileName
+
+
+        if(-not(Test-Path -LiteralPath $InkscapeInstall -PathType Container)){
+            # New-Log -Message "The directory specified in -InkscapeInstall doesn't exist. Pass the correct Inkscape install directory to -InkscapeInstall." -Level ERROR -LogFilePath $LogFilePath
+            throw "Passed -InkscapeInstall doesn't exist."
         }
-        $CMDInkscape = Get-Command inkscape.exe -CommandType Application -ErrorAction SilentlyContinue
-        if(-not($CMDInkscape)){
-            $CMDInkscape = Get-Command inkscape.com -CommandType Application -ErrorAction SilentlyContinue
-            if(-not($CMDInkscape)){
-                throw "Inkscape.exe or inkscape.com cannot be located in PATH. Make sure to add 'YourInkscapeInstall\inkscape\bin' to PATH."
-            }
+        $inkPath = Join-Path $InkscapeInstall -ChildPath 'inkscape.exe'
+        $cmdInk = Get-Command $inkPath -CommandType Application -EA 0
+        if(-not($cmdInk)){
+            # New-Log -Message "Inkscape.exe cannot be found in the passed -InkscapeInstall location." -Level ERROR -LogFilePath $LogFilePath
+            throw "Inkscape.exe cannot be located in the passed -InkscapeInstall location."
+        }
+        if($PSBoundParameters['Overwrite'] -and $PSBoundParameters['PlaceInSubfolder']){
+            # New-Log -Message "-Overwrite and -PlaceInSubfolder shouldn't be used together. Defaulting to -PlaceInSubfolder." -Level WARNING -LogFilePath $LogFilePath
+            Write-Warning "-Overwrite and -PlaceInSubfolder shouldn't be used together. Defaulting to -PlaceInSubfolder."
+            $Overwrite = $false
         }
 
-        $SVGList = [System.Collections.Generic.HashSet[String]]::new()
-        $SVGFolderList = [System.Collections.Generic.HashSet[String]]::new()
+        $svgTargets = [List[Object]]::new()
     }
 
     process {
-
-        $ResolvedDirectories = if ($PSBoundParameters['Path']) {
+        $resolved = if ($PSBoundParameters['Path']) {
             $Path | Get-Item -Force
         } elseif($PSBoundParameters['LiteralPath']) {
             $LiteralPath | Get-Item -Force
         }
 
-        $ResolvedDirectories | % {
-            $CurrentPath = $_
-            if (Test-Path -LiteralPath $CurrentPath.FullName -PathType Container) {
-                $ChildSVGs = Get-ChildItem -LiteralPath $CurrentPath.FullName -Force -File -Recurse -Filter *.svg
-                if($ChildSVGs){
-                    $null = $SVGFolderList.Add($SVG)
+        $resolved | % {
+            $item = $_
+            if($item.PSIsContainer) {
+                $svgSplat = @{
+                    Filter = '*.svg';
+                    Force  = $true;
+                    Path = $item.FullName;
+                    File = $true;
                 }
-            } elseif(Test-Path -LiteralPath $CurrentPath.FullName -PathType Leaf) {
-                if($CurrentPath.Extension -eq '.svg') {
-                    $null = $SVGList.Add($CurrentPath)
+                if($PSBoundParameters['Recurse']){
+                    # New-Log -Message "-Recurse flag has been set. Collecting all SVGs in every folder recursively." -Level INFO -LogFilePath $LogFilePath
+                    $svgSplat['Recurse'] = $true
+                }
+                [Object[]] $svgFiles = gci @svgSplat | % { $_ }
+                if($svgFiles){
+                    # New-Log -Message "Adding all $($svgFiles.Count) SVG files in folder '$($item.Name)':" -Level INFO -LogFilePath $LogFilePath
+                    foreach ($svgFile in $svgFiles) {
+                        New-Log -Message "─── Added SVG: '$($svgFile.Name)'" -Level INFO -LogFilePath $LogFilePath
+                        $null = $svgTargets.Add($svgFile)
+                    }
+                }
+                else {
+                    # New-Log -Message "No SVG files were found in folder $($item.Name)" -Level INFO -LogFilePath $LogFilePath
                 }
             }
+            else {
+                if($_.Extension -eq '.svg') {
+                    # New-Log -Message "─── Added SVG: '$($_.Name)'" -Level INFO -LogFilePath $LogFilePath
+                    $null = $svgTargets.Add($_)
+                }
+            }
+        }
+        if(-not $svgTargets){
+            # New-Log -Message "No valid SVGs were found in passed locations." -Level ERROR -LogFilePath $LogFilePath
+            return
         }
     }
 
     end {
+        $inkscapeActions = [List[String]]@()
+        $svgTargets | % {
+            $curSvg           = $_
+            $curSvgName       = $_.Name
+            $curSvgFullname   = $_.FullName
+            $curSvgFolder     = $curSvg.Directory
+            $curSvgBase       = $curSvg.BaseName
 
-        $SVGFilesToProcess   = [System.Collections.Generic.HashSet[String]]@()
-        $SVGFoldersToProcess = [System.Collections.Generic.HashSet[String]]@()
-        $InkActions          = [System.Collections.Generic.HashSet[String]]@()
+            if($PSBoundParameters['PlaceInSubfolder']){
 
+                # New-Log "-PlaceInSubfolder is set. SVGs will be added to a subfolder called $DestSubfolderName in their current directories" INFO -LogFilePath $LogFilePath
 
-        foreach ($Folder in $SVGFolderList) {
-
-            $CurrentFolderFullName = $Folder.FullName
-
-            if($PlaceInSubfolder){
-                $DestFolder = Join-Path $CurrentFolderFullName -ChildPath $OutputSubfolderName
-                if(-not$Overwrite){
-                    $DestFolder = Get-UniqueNameIfDuplicate -LiteralPath $DestFolder
-                }
-                if(-not(Test-Path -LiteralPath $DestFolder -PathType Container)){
-                    $DestFolderObj = New-Item -Path $DestFolder -ItemType Directory -Force -ErrorAction Ignore | Out-Null
-                    if(-not($DestFolderObj)){
-                        Write-Error "Could not create the destination folder. ($DestFolderObj)"
-                        continue
+                $newSubfolder = Join-Path $curSvgFolder -ChildPath $DestSubfolderName
+                if(-not(Test-Path -LiteralPath $newSubfolder -PathType Container)){
+                    try {
+                        New-Item -Path $newSubfolder -ItemType Directory -Force | Out-Null
+                        # New-Log "Created subfolder to store cropped svgs: $newSubfolder" SUCCESS -LogFilePath $LogFilePath
+                    }
+                    catch {
+                        # New-Log "Unable to create subfolder for cropped SVGs. ($newSubfolder)" ERROR -LogFilePath $LogFilePath -IncludeCallerInfo
+                        throw "Unable to create subfolder for cropped SVGs. ($newSubfolder)"
                     }
                 }
-
-                if(-not$Recurse){
-                    $copyContainingSvgs = @{
-                        LiteralPath = $CurrentFolderFullName
-                        Destination = $DestFolder
-                        PassThru  = $true
-                        Filter   = "*.svg"
-                        Force  = $true
-                        ErrorAction = 'Ignore'
-                    }
-                    $DestFolderCopiedSuccess = Copy-Item @copyContainingSvgs
-                    if(-not($DestFolderCopiedSuccess)){
-                        Write-Error "Could not copy the SVGs in $CurrentFolderFullName to the destination folder ($DestFolder)."
-                        continue
-                    }
-                    else {
-                        $null = $SVGFoldersToProcess.Add($DestFolder)
-                    }
+                $destPath = Join-Path $newSubfolder -ChildPath $curSvgName
+                $destPath = Get-UniqueNameIfDuplicate -LiteralPath $destPath
+                # New-Log "Queuing up SVG file '$curSvgFullname' for crop operation. Final cropped file will be '$destPath'." INFO -LogFilePath $LogFilePath
+                $null = $inkscapeActions.Add("file-open:$curSvgFullname; export-area-drawing; export-filename:$destPath; export-do`r`n")
+            }
+            else{
+                if($Overwrite){
+                    # New-Log "-Overwrite flag was set. Cropped SVGs will overwrite their originals." INFO -LogFilePath $LogFilePath
+                    $null = $inkscapeActions.Add("file-open:$curSvgFullname; export-area-drawing; export-filename:$curSvgFullname; export-do`r`n")
                 }
                 else {
-                    $copyContainingSvgs = @{
-                        LiteralPath = $CurrentFolderFullName
-                        Destination = $DestFolder
-                        PassThru    = $true
-                        Recurse     = $true
-                        Container   = $true
-                        Force       = $true
-                        Filter      = "*.svg"
-                        ErrorAction = 'Ignore'
+                    # New-Log "-Overwrite flag was not set. Cropped SVGs will be renamed with a '_Cropped' suffix." INFO -LogFilePath $LogFilePath
+                    $destName = "${curSvgFolder}\${curSvgBase}_Cropped.svg"
+                    $finalName = Get-UniqueNameIfDuplicate -LiteralPath $destName
+                    if($destName -ne $finalName){
+                        New-Log "Filename collision was detected, renaming final SVG from '$destName' to '$finalName'." INFO -LogFilePath $LogFilePath
                     }
-                    $DestFolderCopiedSuccess = Copy-Item @copyContainingSvgs
-
-                    if(-not($DestFolderCopiedSuccess)){
-                        Write-Error "Could not copy the SVGs (Recursively) in $CurrentFolderFullName to the destination folder ($DestFolder)."
-                        continue
-                    }
-                    else {
-                        $DestFoldersRecursiveTargets = Get-ChildItem -LiteralPath $DestFolder -Force -Directory -Recurse -ErrorAction Continue
-                        if(-not($DestFoldersRecursiveTargets)){
-                            Write-Error "Could not retrieve any directories in $DestFolder the newly created subdirectory ($OutputSubfolderName)."
-                            continue
-                        }
-                        $DestFoldersRecursiveTargets | % {
-                            $null = $SVGFoldersToProcess.Add($_)
-                        }
-                    }
-                }
-            }
-            else {
-                $DestFolder = $CurrentFolderFullName
-                if(-not$Recurse) {
-                    $null = $SVGFoldersToProcess.Add($DestFolder)
-                }
-                else{
-                    $ChildSVGFolders = Get-ChildItem -LiteralPath $DestFolder -Recurse -Force -Directry -ErrorAction Continue
-                    $ChildSVGFolders
+                    # New-Log "Queuing up SVG file '$curSvgFullname' for crop operation. Cropped filename will be $finalName." INFO -LogFilePath $LogFilePath
+                    $null = $inkscapeActions.Add("file-open:$curSvgFullname; export-area-drawing; export-filename:$finalName; export-do`r`n")
                 }
             }
         }
-
-        $SVGFolderList | % {
-
-
+        # New-Log -Message "Preparing for crop operation with Inkscape on $($svgTargets.Count) SVG files. Listing files to be cropped:" -Level INFO -LogFilePath $LogFilePath
+        foreach ($tsvg in $svgTargets) {
+            # New-Log -Message "─── $($tsvg.FullName) will be cropped." -Level INFO -LogFilePath $LogFilePath
         }
-
-        $SVGList | ForEach-Object {
-
-            $CurrentSVGObject   = $_
-            $SVGDirectoryPath   = [System.IO.Directory]::GetParent($CurrentSVG).FullName
-            $SVGDirectoryName   = [System.IO.Path]::GetDirectoryName($CurrentSVG)
-            $SVGFilename        = [System.IO.Path]::GetFileName($CurrentSVG)
-            $SVGFilenameBase    = [System.IO.Path]::GetFileNameWithoutExtension($CurrentSVG)
-            $SVGFullPathNoExt   = $CurrentSVG.Substring(0, $CurrentSVG.LastIndexOf('.'))
-
-            if($PlaceInSubfolder){
-                $DestPathFolder = [System.IO.Path]::Combine($SVGDirectoryPath, $OutputSubfolderName)
-                $DestPathFolder = Get-UniqueNameIfDuplicate -LiteralPath $DestPathFolder
-                if(-not(Test-Path -LiteralPath $DestPathFolder -PathType Container)){
-                    New-Item -Path $DestPathFolder -ItemType Directory -Force -ErrorAction Ignore | Out-Null
-                }
-                Copy-Item -LiteralPath $CurrentSVG -Destination $DestPathFolder -Force
-                $null = $SVGFoldersToProcess.Add($DestPathFolder)
-            }
-
-            elseif(-not$Overwrite){
-
-
-                $Fdir = [System.IO.Path]::Combine($SVGFullPathNoExt, $OutputSubfolderName)
-                $FinalFile = [System.IO.Path]::Combine($Fdir, $OutputSubfolderName)
-                $DestPathFile = [System.IO.Path]::Combine($DestPathFolder, $InkscapeOutputFile)
-                if(-not($DestPathFolder)){
-                    Join-Path -Path $DestPathFolder
-                    $SVGFilenameBase
-                }
-                $null = $SVGFilesToProcess.Add($InkscapeOutputFile)
-            }
-            else{
-                $InkscapeOutputFile = $_
-                $null = $SVGFilesToProcess.Add($InkscapeOutputFile)
-            }
-            $InkActions.Add("file-open:$_; export-area-drawing; export-filename:$InkscapeOutputFile; export-do`r`n")
+        $null = $inkscapeActions.Add("`r`nquit")
+        try {
+            $inkscapeActions | & $cmdInk "--shell" | Out-Null
         }
-
-        $InkActions.Add("`r`nquit")
-        $InkParams = "--shell"
-        $InkActions | & $CMDInkscape $InkParams | Out-Null
-
-        if($RunSVGOAfterConversion){
-            $CMDSVGO = Get-CommandSVGO -ErrorAction Stop
-            if($PlaceInSubfolder){
-                foreach ($Dir in $SVGFoldersToProcess) {
-                    $SVGOParams = "-rf", $Dir
-                    & $CMDSVGO $SVGOParams | Out-Null
-                }
-            }
-            else{
-                foreach ($SVG in $SVGFilesToProcess) {
-                    $SVGOParams = $SVG, "-o", $SVG
-                    & $CMDSVGO $SVGOParams | Out-Null
-                }
-            }
+        catch {
+            Write-Error "An error occurred cropping. Details: $($_.Exception.Message)" -ErrorAction Continue
+        }
+        if($LASTEXITCODE -eq 0){
+            # New-Log -Message "Finished cropping $($svgTargets.Count) SVG files with inkscape." -Level SUCCESS -LogFilePath $LogFilePath
+        }
+        else{
+            # New-Log -Message "The script attempted to crop $($svgTargets.Count) SVG files, but the last exit code was not 0. An error probably occurred." -Level ERROR -IncludeCallerInfo -LogFilePath $LogFilePath
         }
     }
 }

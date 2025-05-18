@@ -1,0 +1,10 @@
+## Futuremotion gitignore for JavaScript Meteor projects (https://www.meteor.com).
+## (https://www.github.com/futuremotiondev/gitignore-templates)
+
+# protect api keys in setting json
+settings-production.json
+settings.json
+
+# protect your mup.json settings
+mup.json
+mup.js

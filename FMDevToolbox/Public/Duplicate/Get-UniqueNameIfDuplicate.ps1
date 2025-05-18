@@ -32,43 +32,29 @@
     .EXAMPLE
     # **Example 1**
     # This example demonstrates how to generate a unique name for a file using a wildcard path.
-
     Get-UniqueNameIfDuplicate -Path "C:\MyFolder\*.txt"
-    PS> C:\MyFolder\Saved Document 02.txt
-    C:\MyFolder\School Report 03.txt
-    C:\MyFolder\BusinessEarnings.txt (Was not modified because this file didn't exist.)
 
     .EXAMPLE
     # **Example 2**
     # This example demonstrates how to generate a unique name for a file using a literal path.
-
     Get-UniqueNameIfDuplicate -LiteralPath "C:\MyFolder\Report.docx"
-    PS> C:\MyFolder\Report 02.docx
 
     .EXAMPLE
     # **Example 3**
     # This example demonstrates how to handle multiple paths with different extensions.
-
     Get-UniqueNameIfDuplicate -Path "C:\MyFolder\*.*" -IndexStart 1 -PadIndexTo 3 -IndexSeparator "_"
-    PS> C:\MyFolder\Saved Document_001.docx
-    C:\MyFolder\FavoriteWallpaper_002.jpg
-    C:\MyFolder\Company Logo_004.png
-    C:\MyFolder\FileThatDidNotExistAlready.png
 
     .NOTES
     Author: Futuremotion
     Website: https://github.com/futuremotiondev
     Date: 12-02-2024
     #>
-
-    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseApprovedVerbs', '')]
-    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingCmdletAliases', '')]
-    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', '')]
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName = "Path")]
     param (
         [Parameter(
             Mandatory,
             Position = 0,
+            ValueFromPipeline,
             ValueFromPipelineByPropertyName,
             ParameterSetName = "Path",
             HelpMessage="Path to one or more locations."
@@ -80,7 +66,6 @@
         [Parameter(
             Mandatory,
             Position = 0,
-            ValueFromPipeline,
             ValueFromPipelineByPropertyName,
             ParameterSetName = "LiteralPath",
             HelpMessage="Literal path to one or more locations."
@@ -102,37 +87,33 @@
         $Resolved = @()
         if ($PSCmdlet.ParameterSetName -eq "Path") {
             foreach ($p in $Path) {
-                $Resolved += Resolve-Path -Path $p -ErrorAction SilentlyContinue | ForEach-Object { $_.ProviderPath }
+                $Resolved += Resolve-Path -Path $p -EA 0 | % { $_.ProviderPath }
             }
         } elseif ($PSCmdlet.ParameterSetName -eq "LiteralPath") {
             $Resolved = $LiteralPath
         }
 
         foreach ($File in $Resolved) {
+
             $FileName = Split-Path -Path $File -Leaf
             $ParentDir = Split-Path -Path $File -Parent
+            $lastDotIndex = $FileName.LastIndexOf(".")
 
-            if (Test-Path -Path $File) {
-                $BaseName, $Extension = if ($FileName.StartsWith(".") -or !(Test-Path -Path $File -PathType Leaf)) {
-                    # Dotfile or Directory
-                    $FileName, ""
-                } else {
-                    $lastDotIndex = $FileName.LastIndexOf(".")
-                    if ($lastDotIndex -ne -1) {
-                        # File with extension
-                        $FileName.Substring(0, $lastDotIndex), $FileName.Substring($lastDotIndex)
-                    } else {
-                        # File without extension
-                        $FileName, ""
-                    }
-                }
-            } else {
-                $BaseName, $Extension = $FileName, ""
+            $BaseName, $Extension = if ($FileName.StartsWith(".")) {
+                # Dotfile or Directory
+                $FileName, ""
+            }
+            elseif($lastDotIndex -ne -1) {
+                # File with extension
+                $FileName.Substring(0, $lastDotIndex), $FileName.Substring($lastDotIndex)
+            }
+            else {
+                # File without extension
+                $FileName, ""
             }
 
             $NewName = $FileName
             $IDX = $IndexStart
-
             while (Test-Path -Path (Join-Path -Path $ParentDir -ChildPath $NewName)) {
                 $PaddedIDX = $IDX.ToString().PadLeft($PadIndexTo, '0')
                 $NewName = if ($Extension) {
@@ -142,7 +123,6 @@
                 }
                 $IDX++
             }
-
             Join-Path $ParentDir -ChildPath $NewName
         }
     }

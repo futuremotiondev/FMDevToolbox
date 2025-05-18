@@ -1,0 +1,6 @@
+[#FFFFFF]gig is a simple CLI for easily generating gitignore templates.[/]
+
+[#FFFFFF]Usage:[/]
+   [#C9CED4]gig [[languages]][/]    [#97A0A5]Comma or space separated list of language IDs.[/]
+   [#C9CED4]gig list[/]           [#97A0A5]Lists all valid language IDs.[/]
+   [#C9CED4]gig help[/]           [#97A0A5]Prints this message.[/]

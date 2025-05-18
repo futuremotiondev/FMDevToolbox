@@ -1,81 +1,88 @@
+using namespace System.Collections.Generic
+
 function Convert-FontOTFToTTF {
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory,Position=0,
-                ValueFromPipeline,
-                ValueFromPipelineByPropertyName)]
+        [Parameter(
+            Mandatory,
+            Position=0,
+            ValueFromPipeline,
+            ValueFromPipelineByPropertyName
+        )]
+        [ValidateScript({
+            if($_ -match '[\?\*]'){
+                throw "Wildcard characters *, ? are not acceptable with -LiteralPath"
+            }
+            if(-not [System.IO.Path]::IsPathRooted($_)){
+                throw "Relative paths are not allowed."
+            }
+            if((Get-Item -LiteralPath $_).PSIsContainer){
+                throw "-LiteralPath for this function only accepts files."
+            }
+            $true
+        })]
+        [Alias('PSPath')]
         [ValidateNotNullOrEmpty()]
-        [String[]] $Fonts,
+        [String[]] $LiteralPath,
 
-        [Parameter(ValueFromPipelineByPropertyName)]
-        [ValidateSet('Source','Subfolder','Custom', IgnoreCase = $true)]
-        [String] $Output = 'Source',
+        [ValidateRange(0.1,3.0)]
+        [Decimal] $ErrorThreshold,
 
-        [Parameter(ValueFromPipelineByPropertyName)]
-        [String] $OutputPath,
-
-        [Parameter(ValueFromPipelineByPropertyName)]
-        [String] $SubfolderName = "TTF Conversion",
-
-        [Int32] $MaxThreads = 16
+        [Int32] $MaxThreads = 8
     )
 
     begin {
 
-        if(($Output -eq 'Custom') -and ([String]::IsNullOrEmpty($OutputPath))){
-            throw "-Output is custom, but no directory was specified."
+        $FontToolsVenvPath = [System.IO.Path]::Combine($env:FM_PY_VENV, "FontTools")
+        if(-not(Test-Path -LiteralPath $FontToolsVenvPath)){
+            throw "FontTools VENV is missing or not installed. ($FontToolsVenvPath)"
         }
-
-        try {
-            & "$env:FM_PY_VENV\FontTools\Scripts\Activate.ps1"
+        $ftActivate = [System.IO.Path]::Combine($FontToolsVenvPath, "Scripts", "Activate.ps1")
+        if(-not(Test-Path -LiteralPath $ftActivate)){
+            throw "FontTools VENV activation script is missing. ($ftActivate)"
         }
+        & $ftActivate
+        try { $cmdFtcli = Get-Command ftcli.exe -CommandType Application }
         catch {
-            throw "FontTools virtual environment could not be activated."
+            throw "ftcli.exe cannot be located in your FontTools VENV Install it and try again."
         }
 
-        $OTFList = [System.Collections.Generic.List[String]]@()
+        $fontList = [HashSet[String]]@()
     }
 
     process {
-        foreach ($Font in $Fonts) {
-            if($Font -match "^.+\.(otf)$"){
-                $OTFList.Add($Font)
+        $resolvedPaths = Get-Item -LiteralPath $LiteralPath -Force
+        $resolvedPaths | % {
+            if(Test-Path -LiteralPath $_.FullName -PathType Leaf){
+                if($_.Extension -eq '.otf'){
+                    $null = $fontList.Add($_.FullName)
+                }
             }
         }
     }
 
     end {
-
-        $OTFList | ForEach-Object -Parallel {
-
-            $CurrentOTF = $_
-            $OTF2TTFCMD = Get-Command otf2ttf.exe -CommandType Application
-            $Output = $Using:Output
-            $OutputPath = $Using:OutputPath
-
-
-            if($Output -eq 'Source'){
-                & $OTF2TTFCMD $CurrentOTF
+        if(-not$ErrorThreshold){
+            $DialogSplat = @{
+                MainInstruction = "Please specify the Approximation Error Threshold measured in UPEM. [0.1<=x<=3.0]"
+                MainContent     = "A value between 0.1 and 3.0."
+                WindowTitle     = "ftCLI OTF2TTF"
+                InputText       = 1.5
             }
+            do {
+                $Result = Invoke-OokiiInputDialog @DialogSplat
+                if($Result.Result -eq 'Cancel'){ exit }
+                [decimal] $ErrorThreshold = $Result.Input
+                [Bool] $toleranceIsValid = ($ErrorThreshold -ge 0.1 -and $ErrorThreshold -le 3.0)
+            } while (-not$ToleranceIsValid)
+        }
 
-            if($Output -eq 'Subfolder'){
-                $FontFolder = [System.IO.Directory]::GetParent($CurrentOTF).FullName
-                $FinalFolder = Join-Path $FontFolder $SubfolderName
-                if(-not(Test-Path -LiteralPath $FinalFolder -PathType Container)){
-                    New-Item -Path $FinalFolder -ItemType Directory -Force | Out-Null
-                }
-                $Params = $CurrentOTF, '-o', $FinalFolder
-                & $OTF2TTFCMD $Params
-            }
-
-            if($Output -eq 'Custom'){
-                if(-not(Test-Path -LiteralPath $OutputPath -PathType Container)){
-                    New-Item -Path $OutputPath -ItemType Directory -Force | Out-Null
-                }
-                $Params = $CurrentOTF, '-o', $OutputPath
-                & $OTF2TTFCMD $Params
-            }
-
+        $fontList | % -Parallel {
+            $curFont = $_
+            $cmdFtcli = $Using:cmdFtcli
+            $ErrorThreshold = $Using:ErrorThreshold
+            $FtcliParams = "converter", "otf2ttf", "--max-err", $ErrorThreshold, "--no-overwrite", $curFont
+            & $cmdFtcli $FtcliParams
         } -ThrottleLimit $MaxThreads
 
         & deactivate

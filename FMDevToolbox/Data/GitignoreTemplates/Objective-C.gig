@@ -1,0 +1,65 @@
+## Futuremotion gitignore for Objective-C projects (https://en.wikipedia.org/wiki/Objective-C).
+## All Futuremotion templates: (https://www.github.com/futuremotiondev/gitignore-templates)
+## Powered by PowerShell.
+
+## Xcode (https://developer.apple.com/xcode/), Carthage (https://github.com/Carthage/Carthage)
+## CocoaPods (https://cocoapods.org/), Fastlane (https://fastlane.tools/), and...
+## Swift Package Manager (https://www.swift.org/documentation/package-manager/)
+
+
+
+
+## Xcode User settings
+xcuserdata/
+*.xcworkspace
+
+# Xcode auto-generates a .swiftpm directory, .xcworkspacedata file, and xcuserdata file.
+# It's not needed unless you have a package configuration file added to your project.
+.swiftpm
+
+## Obj-C/Swift specific
+*.hmap
+
+
+## Carthage
+Carthage/Checkouts
+Carthage/Build/
+
+## CocoaPods: Concensus recommends against adding the Pods dir to your .gitignore.
+## However you should judge for yourself. The pros and cons are mentioned here:
+## https://guides.cocoapods.org/using/using-cocoapods.html#should-i-check-the-pods-directory-into-source-control
+
+# Pods/
+
+## App packaging
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+## Playgrounds
+timeline.xctimeline
+playground.xcworkspace
+
+## Build Directory
+.build/
+
+## Fastlane
+## Concensus is to not store the screenshots in the git repo.
+## Instead, use fastlane to re-generate the screenshots whenever they are needed.
+## For more information about the recommended setup, visit:
+## https://docs.fastlane.tools/best-practices/source-control/#source-control
+
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+
+# Swift Package Manager
+# Add these lines if you want to avoid checking in source code
+# from Swift Package Manager dependencies.
+
+# Packages/
+# Package.pins
+# Package.resolved
+# *.xcodeproj
+

@@ -2,26 +2,6 @@ using namespace System.Management.Automation
 using namespace Microsoft.Toolkit.Uwp.Notifications
 using namespace Spectre.Console
 
-# $Assemblies = @( Get-ChildItem -Path "$script:LibRoot\*.dll" -Recurse -ErrorAction Continue )
-# foreach ($assembly in @($Assemblies)) {
-#     $aName = $assembly.Name
-#     $aFullName = $assembly.FullName
-
-
-#     try {
-#         Write-Verbose -Message "Importing assembly $aFullName now."
-#         Add-Type -LiteralPath $aFullName -Verbose:$false
-#     }
-#     catch {
-#         $eMsg = $_.Exception.Message
-#         $lExceptions = $_.Exception.LoaderExceptions | Sort-Object -Unique
-#         Write-Error "Error processing assembly $aName. Exception: $eMsg"
-#         foreach ($err in $lExceptions) {
-#             Write-Error "Processing $aName LoaderExceptions: $($err.Message)"
-#         }
-#     }
-# }
-
 class CompletionsPowershellGenericTypes : ArgumentCompleterAttribute {
     CompletionsPowershellGenericTypes() : base({
         param($commandName, $parameterName, $wordToComplete, $commandAst, $fakeBoundParameters)
@@ -37,9 +17,6 @@ class ValidateAvailableModules : ValidateArgumentsAttribute {
         }
     }
 }
-
-#  Validate Node Versions  ////////////////////////////////////////////////////////////////////////#
-#//////////////////////////////////////////////////////////////////////////////////////////////////#
 
 class ValidateNodeVersions : IValidateSetValuesGenerator {
     [string[]] GetValidValues() {
@@ -84,6 +61,7 @@ class ValidateNodeVersionsPlusAll : IValidateSetValuesGenerator {
         }
     }
 }
+
 class CompletionsNodeVersions : ArgumentCompleterAttribute {
     CompletionsNodeVersions() : base({
         param($commandName, $parameterName, $wordToComplete, $commandAst, $fakeBoundParameters)
@@ -173,6 +151,46 @@ class AvailableModulesCompleter : ArgumentCompleterAttribute {
     }){}
 }
 
+
+class UNIXTimestampTemplateCompleter : ArgumentCompleterAttribute {
+    UNIXTimestampTemplateCompleter() : base({
+        param($commandName, $parameterName, $wordToComplete, $commandAst, $fakeBoundParameters)
+
+        # Define the list of keywords for completion
+        $Keywords = 'DateTimeOffsetInstance', 'UTCTime', 'LocalTime', 'Date', 'Day', 'DayOfWeek',
+                    'DayOfYear', 'Hour', 'Millisecond', 'Microsecond', 'Nanosecond', 'Minute',
+                    'Month', 'Offset', 'TotalOffsetMinutes', 'Second', 'Ticks', 'UtcTicks',
+                    'TimeOfDay', 'Year'
+
+        # Remove leading and trailing quotes from the word to complete
+        $cleanWord = $wordToComplete.Trim('"', "'")
+
+        # Split the cleaned input by commas to get the last word being completed
+        $parts = $cleanWord -split ',\s*'
+        $lastPart = $parts[-1]
+
+        # Provide suggestions based on the last part
+        return $Keywords | Where-Object { $_ -like "$lastPart*" } | ForEach-Object {
+            [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)
+        }
+    }){}
+}
+
+
+
+# $UNIXTimestampTemplateItems = {
+#     param($commandName, $parameterName, $wordToComplete, $commandAst, $fakeBoundParameters)
+#     $Keywords = 'DateTimeOffsetInstance', 'UTCTime', 'LocalTime', 'Date', 'Day', 'DayOfWeek',
+#     'DayOfYear', 'Hour', 'Millisecond', 'Microsecond', 'Nanosecond', 'Minute', 'Month', 'Offset',
+#     'TotalOffsetMinutes', 'Second', 'Ticks', 'UtcTicks', 'TimeOfDay', 'Year'
+#     $Keywords | % { $_ -like "$wordToComplete*" }
+# }
+
+# Register-ArgumentCompleter -CommandName "Convert-UNIXTimestampToDateTimeOffset" -ParameterName "CustomOutputTemplate" -ScriptBlock $UNIXTimestampTemplateItems
+
+
+
+
 class LoadedModulesCompleter : ArgumentCompleterAttribute {
     LoadedModulesCompleter() : base({
         param($commandName, $parameterName, $wordToComplete, $commandAst, $fakeBoundParameters)
@@ -214,13 +232,6 @@ class ValidateSetAvailableModules : IValidateSetValuesGenerator {
     }
 }
 
-[System.IO.FileAttributes].GetEnumNames() | % {
-    [PSCustomObject]@{
-        Name = $_
-        Value = [System.IO.FileAttributes].GetEnumValues()
-    }
-}
-
 class SpectreConsoleTableBorder : IValidateSetValuesGenerator {
     [String[]] GetValidValues() {
         $lookup = [Spectre.Console.TableBorder] | Get-Member -Static -MemberType Properties | Select-Object -ExpandProperty Name
@@ -248,5 +259,7 @@ class ValidateSpectreTableBorders : IValidateSetValuesGenerator {
         return $lookup
     }
 }
+
+
 
 
