@@ -2,6 +2,75 @@ using namespace System.IO
 using namespace System.Collections.Generic
 
 function Optimize-SVGsWithSVGO {
+    <#
+    .SYNOPSIS
+    Optimizes SVG files using SVGO.
+
+    .DESCRIPTION
+    This function processes SVG files located at specified paths, optimizing them
+    using SVGO. It supports processing files in parallel and can place optimized
+    files into a subfolder.
+
+    .PARAMETER LiteralPath
+    Specifies the literal path to one or more locations containing SVG files.
+    Wildcard characters are not supported.
+
+    .PARAMETER PlaceInSubfolder
+    Indicates whether the optimized SVG files should be placed in a subfolder.
+
+    .PARAMETER SubfolderName
+    Specifies the name of the subfolder where optimized SVG files will be placed if
+    PlaceInSubfolder is used. Defaults to "SVGO".
+
+    .PARAMETER Parallel
+    Enables parallel processing of SVG files for optimization.
+
+    .PARAMETER MaxThreads
+    Specifies the maximum number of threads to use for parallel processing.
+    Defaults to 18.
+
+    .EXAMPLE
+    # **Example 1**
+    # This example demonstrates how to optimize SVG files from a specific directory.
+    Optimize-SVGsWithSVGO -LiteralPath "C:\SVGs"
+
+    .EXAMPLE
+    # **Example 2**
+    # This example demonstrates how to optimize SVG files and place them in a subfolder named "Optimized".
+    Optimize-SVGsWithSVGO -LiteralPath "C:\SVGs" -PlaceInSubfolder -SubfolderName "Optimized"
+
+    .EXAMPLE
+    # **Example 3**
+    # This example demonstrates how to optimize SVG files using parallel processing with a custom thread limit.
+    Optimize-SVGsWithSVGO -LiteralPath "C:\SVGs" -Parallel -MaxThreads 10
+
+    .EXAMPLE
+    # **Example 4**
+    # This example demonstrates how to optimize SVG files from multiple directories using pipeline input.
+    "C:\SVGs1", "C:\SVGs2" | Optimize-SVGsWithSVGO
+
+    .EXAMPLE
+    # **Example 5**
+    # This example demonstrates how to optimize SVG files from a directory and place them in a default subfolder.
+    Optimize-SVGsWithSVGO -LiteralPath "C:\SVGs" -PlaceInSubfolder
+
+    .EXAMPLE
+    # **Example 6**
+    # This example demonstrates how to handle errors when optimizing SVG files.
+    try {
+        Optimize-SVGsWithSVGO -LiteralPath "C:\SVGs"
+    } catch {
+        Write-Error "An error occurred during SVG optimization."
+    }
+
+    .OUTPUTS
+    Writes success messages to the host upon successful optimization of SVG files.
+
+    .NOTES
+    Author: Futuremotion
+    Website: https://github.com/futuremotiondev
+    Date: 05-17-2025
+    #>
     [CmdletBinding()]
     param (
         [Parameter(

@@ -98,13 +98,18 @@ function Remove-AllMacOSJunkFiles {
 
         # Set maximum number of threads for parallel deletion operations.
         [Parameter(ValueFromPipelineByPropertyName)]
-        [Int32] $MaxThreads = 16
+        [Int32] $MaxThreads = 16,
+
+        # Show what will be deleted instead of actually deleting.
+        # Basically, a custom -whatif.
+        [Parameter(ValueFromPipelineByPropertyName)]
+        [Switch] $DryRun
     )
 
     begin {
 
         # Dictionary of known macOS junk folders to be removed.
-        $macJunkFolders = @{
+        $junkDirs = @{
             SPOTLIGHT = '.Spotlight-V100'
             FSEVENTS  = '.fseventsd'
             TRASHES   = '.Trashes'
@@ -139,23 +144,35 @@ function Remove-AllMacOSJunkFiles {
 
         # Identify junk folders within each directory and add them to the removal list.
         foreach ($dir in $dirSet) {
-            Get-ChildItem -LiteralPath $dir -Recurse -Directory -Force |
-            Where-Object { $macJunkFolders.Values -contains $_.Name } |
+            gci -LP $dir -Recurse -Directory -Force | ? { $junkDirs.Values -contains $_.Name } |
             % { $null = $foldersToRemove.Add($_.FullName) }
         }
 
-        # Remove identified junk folders using parallel processing.
-        $foldersToRemove | % -Parallel {
-            Remove-Item -LiteralPath $_ -Force -Recurse -Confirm:$false -ErrorAction Continue
-        } -ThrottleLimit $MaxThreads
+        if($DryRun){
+            Write-SpectreHost "[#FFFFFF]Directories to be deleted:[/]"
+            foreach ($fld in $foldersToRemove) {
+                Write-SpectreHost "[#DEE7F0]└── $fld[/]"
+            }
+        }
+        else {
+            # Remove identified junk folders using parallel processing.
+            $foldersToRemove | % -Parallel {
+                Remove-Item -LiteralPath $_ -Force -Recurse -Confirm:$false -ErrorAction Continue
+            } -ThrottleLimit $MaxThreads
+        }
 
-        # Filter existing directories after folder removal to ensure they still exist.
-        $existingDirs = @($dirSet | Where-Object {
-            Test-Path -LiteralPath $_ -PathType Container
-        })
+        if(-not $DryRun){
+            # Filter existing directories after folder removal to ensure they still exist.
+            $dirSetNew = @($dirSet | Where-Object {
+                Test-Path -LiteralPath $_ -PathType Container
+            })
+        }
+        else {
+            $dirSetNew = $dirSet
+        }
 
         # Identify junk files within each existing directory and add them to the removal list.
-        foreach ($dir in $existingDirs) {
+        foreach ($dir in $dirSetNew) {
             $dChild = Get-ChildItem -LiteralPath $dir -Recurse -File -Force
             $dsFile = '.DS_Store'
             $adRegex = [regex]'^\._.+'
@@ -167,10 +184,18 @@ function Remove-AllMacOSJunkFiles {
             $filteredFiles | % { $null = $filesToRemove.Add($_.FullName) }
         }
 
-        # Remove identified junk files using parallel processing.
-        $filesToRemove | % -Parallel {
-            Remove-Item -LiteralPath $_ -Force -Confirm:$false -ErrorAction Continue
-        } -ThrottleLimit $MaxThreads
+        if(-not $DryRun){
+            # Remove identified junk files using parallel processing.
+            $filesToRemove | % -Parallel {
+                Remove-Item -LiteralPath $_ -Force -Confirm:$false -ErrorAction Continue
+            } -ThrottleLimit $MaxThreads
+        }
+        else {
+            Write-SpectreHost "`n[#FFFFFF]Files to be deleted:[/]"
+            foreach ($fle in $filesToRemove) {
+                Write-SpectreHost "[#DEE7F0]└── $fle[/]"
+            }
+        }
 
     }
 }
