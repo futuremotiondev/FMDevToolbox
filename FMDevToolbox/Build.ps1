@@ -1,6 +1,4 @@
-﻿#Requires -modules PwshSpectreConsole
-
-using namespace System.Collections.Generic
+﻿using namespace System.Collections.Generic
 
 $script:ModuleRoot             = $PSScriptRoot
 $script:ModuleName             = $script:ModuleRoot.Split('\')[-1]
@@ -16,139 +14,8 @@ $script:ChangelogPath          = "$script:RepoRoot/CHANGELOG.md"
 $script:ReadmePath             = "$script:RepoRoot/README.md"
 $script:LicensePath            = "$script:RepoRoot/LICENSE.md"
 
-function Install-ModuleDependencies {
-    [CmdletBinding()]
-    param (
-        [String] $InstallPath = "$script:ModuleLib",
-        [Hashtable] $NuGet,
-        [Hashtable] $Internal
-    )
 
-    if(($NuGet.Count -eq 0) -and ($Internal.Count -eq 0)){
-        Write-Warning "No packages to install."
-        return
-    }
-
-    New-Item $InstallPath -ItemType Directory -Force | Out-Null
-    $RequiredAssemblies = @()
-
-    function InstallInternalPackage {
-        [CmdletBinding()]
-        param (
-            [Parameter(Mandatory, Position=0)]
-            [string] $PackageName,
-            [string] $InstallPath,
-            [string] $SourcePath,
-            [string] $TargetFramework = 'net6.0',
-            [string] $AssemblyName,
-            [int32] $DotnetVersion
-        )
-
-        if(-not($DotnetVersion)){ $DotnetVersion = 8 }
-        if(-not($AssemblyName)){ $AssemblyName = "$PackageName.dll" }
-        if(-not($InstallPath)){ $InstallPath = [System.IO.Path]::Combine($script:ModuleLib, $PackageName, $TargetFramework) }
-        if(-not($SourcePath)){ $SourcePath = [System.IO.Path]::Combine($script:ModuleRoot, 'Src', $PackageName) }
-
-        $PreviousPath = Join-Path $script:ModuleLib $PackageName
-        Remove-Item $PreviousPath -Recurse -Force -EA SilentlyContinue
-
-        # Ensure directories exist
-        foreach ($Path in @($InstallPath, $SourcePath)) {
-            $null = New-Item -Path $Path -ItemType Directory -Force -EA SilentlyContinue
-        }
-
-        # Check for dotnet SDK
-        if (-not (Get-Command dotnet -EA SilentlyContinue) -or
-            -not (dotnet --list-sdks | Select-String "^$DotnetVersion\.")) {
-            Write-Host "dotnet SDK $DotnetVersion wasn't found. Please install it."
-            Write-Host "Run 'winget install Microsoft.DotNet.SDK.$DotnetVersion' in an admin console."
-            return
-        }
-
-        try {
-            Push-Location -Path $SourcePath
-            $null = & dotnet build -c Release -o $InstallPath
-            return [System.IO.Path]::Combine($InstallPath, $AssemblyName)
-        }
-        catch {
-            Write-Error "A problem occurred building $PackageName. ($_)"
-        }
-        finally {
-            Remove-Item "$SourcePath\obj" -Recurse -Force -ea SilentlyContinue
-            Pop-Location
-        }
-    }
-
-    function InstallNugetPackage {
-        [CmdletBinding()]
-        [OutputType([String])]
-        param (
-            [string] $InstallPath,
-            [string] $PackageName,
-            [string] $Version,
-            [string] $Framework,
-            [string] $DLLName
-        )
-
-        if(-not$DLLName){ $DLLName = "$PackageName.dll" }
-
-        $InstallPath = Join-Path $InstallPath -ChildPath "$PackageName.$Version"
-        Remove-Item $InstallPath -Recurse -Force -EA SilentlyContinue | Out-Null
-        New-Item -Path $InstallPath -ItemType Directory -Force | Out-Null
-
-        $TempDir = [System.IO.Directory]::CreateTempSubdirectory().FullName
-        $DownloadPath = Join-Path $TempDir "download.zip"
-
-        try {
-            Invoke-WebRequest "https://www.nuget.org/api/v2/package/$PackageName/$Version" -OutFile $DownloadPath -UseBasicParsing
-            Expand-Archive $DownloadPath -DestinationPath $TempDir -Force
-            Remove-Item $DownloadPath
-            $Dir = Get-ChildItem -LiteralPath $TempDir -Include $Framework -Directory -Recurse | % { $_.FullName }
-            Move-Item -LiteralPath $Dir -Destination $InstallPath -Force
-            return [System.IO.Path]::Combine($InstallPath, $Framework, $DLLName)
-        }
-        catch {
-            Write-Error "An error occurred retrieving $PackageName v$Version. Details: $_"
-        }
-        finally {
-            Remove-Item -LiteralPath $TempDir -Recurse -Force -EA SilentlyContinue
-        }
-    }
-
-    if($NuGet.Count -gt 0){
-        foreach ($Package in $NuGet.GetEnumerator()) {
-            $Params = @{
-                InstallPath = $InstallPath
-                PackageName = $Package.Key
-                Version     = $Package.Value.Version
-                Framework   = $Package.Value.Framework
-                DLLName     = $Package.Value.DLLName
-            }
-
-            $RequiredAssemblies += InstallNugetPackage @Params
-        }
-    }
-
-    if($Internal.Count -gt 0){
-        foreach ($Library in $Internal.GetEnumerator()) {
-            $Params = @{
-                PackageName   = $Library.Key
-                InstallPath   = Join-Path $InstallPath -ChildPath ($Library.Value.InstallPath)
-                SourcePath    = $Library.Value.SourcePath
-                DotnetVersion = $Library.DotnetVersion
-                AssemblyName  = $Library.AssemblyName
-            }
-            $RequiredAssemblies += InstallInternalPackage @Params
-        }
-    }
-
-    # Create Relative Paths
-    $RequiredAssemblies = $RequiredAssemblies | % {
-        $_.Replace($script:ModuleRoot, '.')
-    }
-    return $RequiredAssemblies | Sort-Object
-
-}
+Import-Module -Name $script:ModuleManifest -Force
 
 function Update-ModuleFunctionsAndAliases {
     [CmdletBinding()]
@@ -158,107 +25,125 @@ function Update-ModuleFunctionsAndAliases {
         [Switch] $Silent
     )
 
-    [PSCustomObject[]] $PublicAliases = @()
-    [PSCustomObject[]] $PublicFunctions = @()
-    [PSCustomObject[]] $PrivateAliases = @()
-    [PSCustomObject[]] $PrivateFunctions = @()
-
-    # Accumulate file path globs to functions based on switches that were set.
-    # Only Public and Private for now.
-    [string[]] $functionsRootPath = @()
-    if($Public -or $Private){
-        if($Public){
-            $functionsRootPath += $script:ModPublicFunctions
-        }
-        elseif($Private){
-            $functionsRootPath += $script:ModPrivateFunctions
-        }
-    }
-    else {
+    [string[]] $functionsToAdd = @()
+    $NothingPassed = (-not $Public -and -not $Private)
+    if($NothingPassed) {
         Write-Verbose "Neither Public or Private was specified. Defaulting to both."
-        $functionsRootPath += $script:ModPublicFunctions
-        $functionsRootPath += $script:ModPrivateFunctions
+    }
+    if($Public -or $NothingPassed){
+        $functionsToAdd += "$script:ModuleRoot\Public\*.ps1"
+    }
+    if($Private -or $NothingPassed){
+        $functionsToAdd += "$script:ModuleRoot\Private\*.ps1"
     }
 
-    foreach ($curRoot in $functionsRootPath) {
-        Get-ChildItem -Path $curRoot -Recurse -Force -EA 0 | % {
-            $obj = [PSCustomObject]@{
-                BaseName = $_.BaseName
-                FullPath = $_.FullName
-                Category = $_.DirectoryName
+    [Object[]] $PublicAliases = @()
+    [String[]] $PublicAliasNames = @()
+    [Object[]] $PrivateAliases = @()
+    [String[]] $PrivateAliasNames = @()
+    [Object[]] $PublicFunctions = @()
+    [String[]] $PublicFunctionNames = @()
+    [Object[]] $PrivateFunctions = @()
+    [String[]] $PrivateFunctionNames = @()
+
+    :PathLoop foreach ($rootPath in $functionsToAdd) {
+        $rootFiles = Get-ChildItem -Path $rootPath -Recurse -File -Force -EA 0
+        foreach ($rootFile in $rootFiles) {
+            if($rootPath -eq "$script:ModuleRoot\Public\*.ps1"){
+                $isPublic = $true
+            }
+            else {
+                $isPublic = $false
             }
 
-            $Functions.Value += $obj
-            $Alias = Get-Alias -Definition $_.BaseName -EA 0
+            $curFileBase = $rootFile.BaseName
+            $curFileFull = $rootFile.FullName
+            $curFileDir  = $rootFile.DirectoryName
 
-            Write-Verbose "`$Alias.Name: $Alias.Name"
-            Write-Verbose "`$Alias.ResolvedCommand:" $Alias.ResolvedCommand
+            if($curFileBase -and $curFileFull -and $curFileDir){
+                $fObj = [PSCustomObject]@{
+                    BaseName = $curFileBase
+                    FullPath = $curFileFull
+                    Category = $curFileDir
+                }
+                if($isPublic){
+                    $PublicFunctionNames += $curFileBase
+                    $PublicFunctions += $fObj
+                }
+                else {
+                    $PrivateFunctionNames += $curFileBase
+                    $PrivateFunctions += $fObj
+                }
+            }
 
-            if ($Alias) { $Aliases.Value += $Alias.Name }
+            $aliasObj = Get-Alias -Definition $curFileBase -EA 0
+            $aliasCmd = $aliasObj.ResolvedCommandName
+            if(-not $aliasCmd){
+                $aliasCmd = $aliasObj.ReferencedCommand.Name
+                if(-not $aliasCmd){
+                    $aliasCmd = $aliasObj.ResolvedCommand.Name
+                }
+            }
+            if($aliasObj){
+                $aObj = [PSCustomObject]@{
+                    AliasName = $aliasObj.Name
+                    AliasCommand = $aliasCmd
+                }
+                if($isPublic){
+                    $PublicAliasNames += $aliasObj.Name
+                    $PublicAliases += $aObj
+                }
+                else {
+                    $PrivateAliasesNames += $aliasObj.Name
+                    $PrivateAliases += $aObj
+                }
+            }
         }
     }
 
-
-    # Helper function to process files and collect functions and aliases
-    $AccumulateMembers = {
-        [CmdletBinding()]
-        param (
-            [Parameter(Mandatory,Position=0)]
-            [string] $FunctionsRoot,
-            [ref] $Functions,
-            [ref] $Aliases,
-            [switch] $Public
-        )
-
-        Get-ChildItem -Path $FunctionsRoot -Recurse -Force -EA 0 | % {
-
-            $obj = [PSCustomObject]@{
-                BaseName = $_.BaseName
-                FullPath = $_.FullName
-                Category = $_.DirectoryName
-            }
-
-            $Functions.Value += $obj
-            $Alias = Get-Alias -Definition $_.BaseName -EA 0
-
-            Write-Verbose "`$Alias.Name: $Alias.Name"
-            Write-Verbose "`$Alias.ResolvedCommand:" $Alias.ResolvedCommand
-
-            if ($Alias) { $Aliases.Value += $Alias.Name }
-        }
-    }
-
-
-
-    & $AccumulateMembers -Public
-    & $AccumulateMembers -Private
-
-    & $AccumulateMembers "$ModuleRoot\Public\*.ps1" -Functions ([ref]$PublicFunctions) -Aliases ([ref]$PublicAliases)
-    $PublicFunctions = $PublicFunctions | Sort-Object
-    $PublicAliases   = $PublicAliases   | Sort-Object
-    & $AccumulateMembers "$ModuleRoot\Private\*.ps1" -Functions ([ref]$PrivateFunctions) -Aliases ([ref]$PrivateAliases)
-    $PrivateFunctions = $PrivateFunctions | Sort-Object
-    $PrivateAliases   = $PrivateAliases   | Sort-Object
+    $PublicFunctionNames   = $PublicFunctionNames   | Sort-Object
+    $PrivateFunctionNames  = $PrivateFunctionNames  | Sort-Object
+    $PublicAliasNames      = $PublicAliasNames      | Sort-Object
+    $PrivateAliasNames     = $PrivateAliasNames     | Sort-Object
+    $PublicFunctions       = $PublicFunctions       | Sort-Object -Property BaseName
+    $PrivateFunctions      = $PrivateFunctions      | Sort-Object -Property BaseName
+    $PublicAliases         = $PublicAliases         | Sort-Object -Property AliasName
+    $PrivateAliases        = $PrivateAliases        | Sort-Object -Property AliasName
 
     if(-not$Silent){
-        foreach ($pf in $PublicFunctions)   { Write-SpectreHost "[#697582]Public function added:   [/][#FFFFFF]$pf[/]" }
-        foreach ($pa in $PublicAliases)     { Write-SpectreHost "[#697582]Public alias added:      [/][#FFFFFF]$pa[/]" }
-        foreach ($prf in $PrivateFunctions) { Write-SpectreHost "[#697582]Private function added:  [/][#FFFFFF]$prf[/]" }
-        foreach ($pra in $PrivateAliases)   { Write-SpectreHost "[#697582]Private alias added:     [/][#FFFFFF]$pra[/]" }
+        foreach ($pf in $PublicFunctionNames)   {
+            # Write-SpectreHost "[#7A8085]Public function added:   [/][#FFFFFF]$($pf)[/]"
+        }
+        foreach ($pa in $PublicAliasNames)     {
+            Write-SpectreHost "[#7A8085]Public alias added:      [/][#FFFFFF]$($pa)[/]"
+        }
+        foreach ($prf in $PrivateFunctionNames) {
+            # Write-SpectreHost "[#7A8085]Private function added:  [/][#FFFFFF]$($prf)[/]"
+        }
+        foreach ($pra in $PrivateAliasNames)   {
+            Write-SpectreHost "[#7A8085]Private alias added:     [/][#FFFFFF]$($pra)[/]"
+        }
     }
 
     $Export = [PSCustomObject]@{
-        AllFunctions     = $PublicFunctions + $PrivateFunctions
-        AllAliases       = $PublicAliases + $PrivateAliases
-        PublicFunctions  = $PublicFunctions
-        PrivateFunctions = $PrivateFunctions
-        PublicAliases    = $PublicAliases
-        PrivateAliases   = $PrivateAliases
+        AllFunctions        = $PublicFunctionNames + $PrivateFunctionNames
+        AllAliases          = $PublicAliasNames + $PrivateAliasNames
+        PublicFunctions     = $PublicFunctionNames
+        PrivateFunctions    = $PrivateFunctionNames
+        PublicAliases       = $PublicAliasNames
+        PrivateAliases      = $PrivateAliasNames
+        AllFunctionsObj     = $PublicFunctions + $PrivateFunctions
+        AllAliasesObj       = $PublicAliases + $PrivateAliases
+        PublicFunctionsObj  = $PublicFunctions
+        PrivateFunctionsObj = $PrivateFunctions
+        PublicAliasesObj    = $PublicAliases
+        PrivateAliasesObj   = $PrivateAliases
     }
     $Export
 }
+
 function Update-FMModule {
-    [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
+    [CmdletBinding()]
     param (
         [String] $SetPrerelease,
         [Switch] $RemovePrerelease,
@@ -349,6 +234,5 @@ function Update-FMModule {
     Test-ModuleManifest -Path $script:ModuleManifest
 }
 
-
-Update-FMModule -UpdateFunctionsAndAliases
+Update-FMModule -UpdateFunctionsAndAliases -Verbose
 

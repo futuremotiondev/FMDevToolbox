@@ -61,31 +61,18 @@ function Remove-AllMacOSJunkFiles {
     Website: https://github.com/futuremotiondev
     Date: 05-17-2025
     #>
-    [CmdletBinding(DefaultParameterSetName="Path")]
+    [CmdletBinding()]
     param (
-        # Define parameters for the function, allowing input via pipeline or direct specification.
         [Parameter(
             Mandatory,
             Position = 0,
             ValueFromPipeline,
-            ValueFromPipelineByPropertyName,
-            ParameterSetName = "Path",
-            HelpMessage="Path to one or more directories."
-        )]
-        [SupportsWildcards()]
-        [ValidateNotNullOrEmpty()]
-        [String[]] $Path,
-
-        [Parameter(
-            Mandatory,
-            Position = 0,
             ValueFromPipelineByPropertyName,
             ParameterSetName = "LiteralPath",
             HelpMessage="Literal path to one or more directories."
         )]
         [ValidateScript({
             if ($_ -match '[\?\*]') { throw "Wildcard chars are not acceptable." }
-            if (-not [Path]::IsPathRooted($_)) { throw "Relative paths are not allowed." }
             $true
         })]
         [Alias('PSPath')]
@@ -124,14 +111,13 @@ function Remove-AllMacOSJunkFiles {
 
     process {
         # Resolve paths based on parameter set and add them to the directory set if they are containers.
-        $resolvedPaths = if($PSBoundParameters['Path']) {
-            $Path | Get-Item -Force
-        } else {
-            $LiteralPath | Get-Item -Force
+        $resolvedPaths = $LiteralPath | % {
+            $PSCmdlet.GetUnresolvedProviderPathFromPSPath($_)
         }
         foreach ($item in $resolvedPaths) {
-            if ($item.PSIsContainer) {
-                $null = $dirSet.Add($item.FullName)
+            $itemObj = Get-Item -LiteralPath $item -Force
+            if ($itemObj.PSIsContainer) {
+                $null = $dirSet.Add($itemObj.FullName)
             }
         }
     }
@@ -149,10 +135,18 @@ function Remove-AllMacOSJunkFiles {
         }
 
         if($DryRun){
-            Write-SpectreHost "[#FFFFFF]Directories to be deleted:[/]"
-            foreach ($fld in $foldersToRemove) {
-                Write-SpectreHost "[#DEE7F0]└── $fld[/]"
+
+            if($foldersToRemove.Count -gt 0){
+                Write-SpectreHost "[#FFFFFF]Directories to be deleted:[/]"
+                foreach ($fld in $foldersToRemove) {
+                    Write-SpectreHost "[#878D94]└─ $fld[/]"
+                }
             }
+            else {
+                Write-SpectreHost "[#FFFFFF]No directories to be deleted.[/]"
+            }
+
+
         }
         else {
             # Remove identified junk folders using parallel processing.
@@ -161,39 +155,44 @@ function Remove-AllMacOSJunkFiles {
             } -ThrottleLimit $MaxThreads
         }
 
+        [string[]] $dirSetNew = @()
         if(-not $DryRun){
             # Filter existing directories after folder removal to ensure they still exist.
-            $dirSetNew = @($dirSet | Where-Object {
-                Test-Path -LiteralPath $_ -PathType Container
-            })
+            foreach ($dir in $dirSet) {
+                if($dir){
+                    $dirSetNew += $dir
+                }
+            }
         }
         else {
-            $dirSetNew = $dirSet
+            foreach ($dir in $dirSet) {
+                $dirSetNew += $dir
+            }
         }
 
         # Identify junk files within each existing directory and add them to the removal list.
         foreach ($dir in $dirSetNew) {
             $dChild = Get-ChildItem -LiteralPath $dir -Recurse -File -Force
-            $dsFile = '.DS_Store'
+            $dsFile = @('DS_Store','.DS_Store')
             $adRegex = [regex]'^\._.+'
             $filteredFiles = if ($SkipAppleDoubleFiles) {
-                $dChild | Where-Object { $_.Name -eq $dsFile }
+                $dChild | Where-Object { $_.Name -in $dsFile }
             } else {
-                $dChild | Where-Object { $_.Name -eq $dsFile -or $adRegex.IsMatch($_.Name) }
+                $dChild | Where-Object { ($_.Name -in $dsFile) -or ($adRegex.IsMatch($_.Name)) }
             }
             $filteredFiles | % { $null = $filesToRemove.Add($_.FullName) }
         }
 
         if(-not $DryRun){
-            # Remove identified junk files using parallel processing.
             $filesToRemove | % -Parallel {
-                Remove-Item -LiteralPath $_ -Force -Confirm:$false -ErrorAction Continue
+                Write-Verbose "Removing file $_"
+                Remove-Item -LiteralPath $_ -Force -ErrorAction Continue
             } -ThrottleLimit $MaxThreads
         }
         else {
             Write-SpectreHost "`n[#FFFFFF]Files to be deleted:[/]"
             foreach ($fle in $filesToRemove) {
-                Write-SpectreHost "[#DEE7F0]└── $fle[/]"
+                Write-SpectreHost "[#878D94]└─ $fle[/]"
             }
         }
 
