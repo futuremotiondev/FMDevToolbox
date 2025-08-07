@@ -38,12 +38,11 @@ function Show-UWPToastNotification {
     begin {
         Add-UWPNotificationsAssembly
         $ContentBuilder = [Microsoft.Toolkit.Uwp.Notifications.ToastContentBuilder]::new()
+        # $ToastContent = [CustomizeToast]::new($ContentBuilder)
     }
 
     process {
-
         $ContentBuilder.AddText($Title, $null, $null, $null, $null, $null) | Out-Null
-
         if($Description){
             foreach ($Line in $Description) {
                 $ContentBuilder.AddText($Line, $null, $null, $null, $null, $null) | Out-Null
